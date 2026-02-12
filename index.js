@@ -68,6 +68,7 @@ app.get("/health", (req, res) => {
     success: true,
     message: "Server is running",
     timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
   });
 });
 
@@ -92,7 +93,39 @@ const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+
+  // Start keep-alive ping after server starts (only in production)
+  if (process.env.NODE_ENV === "production") {
+    startKeepAlive();
+  }
 });
+
+// Keep-alive function to prevent Render sleep
+const startKeepAlive = () => {
+  const RENDER_URL =
+    process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
+  if (!RENDER_URL) {
+    console.log(
+      "⚠️  No RENDER_EXTERNAL_URL or SELF_PING_URL set. Keep-alive not started.",
+    );
+    return;
+  }
+
+  console.log(`🔄 Keep-alive started. Pinging: ${RENDER_URL}/health`);
+
+  // Ping every 10 minutes (600,000 ms)
+  const PING_INTERVAL = 10 * 60 * 1000;
+
+  setInterval(async () => {
+    try {
+      const response = await fetch(`${RENDER_URL}/health`);
+      const data = await response.json();
+      console.log(`✅ Keep-alive ping successful: ${new Date().toISOString()}`);
+    } catch (error) {
+      console.error(`❌ Keep-alive ping failed: ${error.message}`);
+    }
+  }, PING_INTERVAL);
+};
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {

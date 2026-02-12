@@ -5,7 +5,7 @@ corrected_content = '''# Anime Streaming Backend API
 > **Version:** 1.0.0  
 > **Last Updated:** 2026-02-12  
 > **License:** ISC  
-> **Repository:** [Your Repository URL]
+> **Repository:** https://github.com/jawahargovindasamy/OtakuStreams-Backend.git
 
 Production-ready REST API for anime streaming applications with authentication, watchlist management, and progress tracking.
 
@@ -91,8 +91,8 @@ The Anime Streaming Backend API provides a complete server-side solution for ani
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/anime-streaming-backend.git
-cd anime-streaming-backend
+git clone https://github.com/jawahargovindasamy/OtakuStreams-Backend.git
+cd OtakuStreams-Backend
 
 # Install dependencies
 npm install
@@ -1051,7 +1051,7 @@ module.exports = {
 
 ### Getting Help
 
-- **Issues:** [GitHub Issues](https://github.com/yourusername/anime-streaming-backend/issues)
+- **Issues:** [GitHub Issues](https://github.com/yourusername/OtakuStreams-Backend/issues)
 - **Email:** support@yourdomain.com
 - **Documentation:** [Full API Docs](https://docs.yourdomain.com)
 
@@ -1080,7 +1080,7 @@ sudo systemctl start mongod
 
 ---
 
-**[Back to Top](#anime-streaming-backend-api)**
+**[Back to Top](#OtakuStreams-Backend)**
 
 Built with care for anime fans everywhere
 '''
