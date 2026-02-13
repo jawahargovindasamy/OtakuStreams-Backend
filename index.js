@@ -102,29 +102,40 @@ const server = app.listen(PORT, () => {
 
 // Keep-alive function to prevent Render sleep
 const startKeepAlive = () => {
-  const RENDER_URL =
-    process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
-  if (!RENDER_URL) {
-    console.log(
-      "⚠️  No RENDER_EXTERNAL_URL or SELF_PING_URL set. Keep-alive not started.",
-    );
+  // Use SELF_PING_URL for local or RENDER_EXTERNAL_URL for production
+  const PING_URL = process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
+
+  if (!PING_URL) {
+    console.log("⚠️ No ping URL provided. Keep-alive not started.");
     return;
   }
 
-  console.log(`🔄 Keep-alive started. Pinging: ${RENDER_URL}/health`);
+  console.log(
+    `🔄 Keep-alive started. Pinging: ${PING_URL}/health every 8 minutes`,
+  );
 
-  // Ping every 10 minutes (600,000 ms)
-  const PING_INTERVAL = 10 * 60 * 1000;
+  const PING_INTERVAL = 8 * 60 * 1000; // 8 minutes
 
   setInterval(async () => {
     try {
-      const response = await fetch(`${RENDER_URL}/health`);
-      const data = await response.json();
+      const res = await fetch(`${PING_URL}/health`);
+      const data = await res.json();
       console.log(`✅ Keep-alive ping successful: ${new Date().toISOString()}`);
-    } catch (error) {
-      console.error(`❌ Keep-alive ping failed: ${error.message}`);
+    } catch (err) {
+      console.error(`❌ Keep-alive ping failed: ${err.message}`);
     }
   }, PING_INTERVAL);
+
+  // Optional: ping immediately on start
+  (async () => {
+    try {
+      const res = await fetch(`${PING_URL}/health`);
+      const data = await res.json();
+      console.log(`✅ Initial ping successful: ${new Date().toISOString()}`);
+    } catch (err) {
+      console.error(`❌ Initial ping failed: ${err.message}`);
+    }
+  })();
 };
 
 // Handle unhandled promise rejections
