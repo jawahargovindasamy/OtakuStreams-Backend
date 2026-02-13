@@ -43,6 +43,8 @@ export const register = async (req, res) => {
           email: user.email,
           role: user.role,
           token: generateToken(user._id),
+          avatar: user.avatar,
+          createdAt: user.createdAt,
         },
       });
     }
@@ -90,6 +92,7 @@ export const login = async (req, res) => {
         role: user.role,
         avatar: user.avatar,
         token: generateToken(user._id),
+        createdAt: user.createdAt,
       },
     });
   } catch (error) {
