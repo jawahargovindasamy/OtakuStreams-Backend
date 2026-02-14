@@ -1,6 +1,5 @@
-
 > **Version:** 1.0.0  
-> **Last Updated:** 2026-02-12  
+> **Last Updated:** 2026-02-14  
 > **License:** ISC  
 > **Repository:** https://github.com/jawahargovindasamy/OtakuStreams-Backend.git
 
@@ -27,7 +26,7 @@ Production-ready REST API for anime streaming applications with authentication, 
 
 ## Overview
 
-The Anime Streaming Backend API provides a complete server-side solution for anime streaming platforms. Built with **Node.js**, **Express**, and **MongoDB**, it offers secure user authentication, comprehensive watchlist management with five status categories, and continue-watching progress tracking.
+The Anime Streaming Backend API provides a complete server-side solution for anime streaming platforms. Built with **Node.js**, **Express**, and **MongoDB**, it offers secure user authentication, comprehensive watchlist management with five status categories, notification for the anime added in watchlist, and continue-watching progress tracking.
 
 ### Tech Stack
 
@@ -65,6 +64,12 @@ The Anime Streaming Backend API provides a complete server-side solution for ani
 - Personal notes for each anime
 - Statistics and analytics
 - Duplicate prevention
+
+### Notification
+
+- Get notification for the anime in the watchlist based on need notification
+- Update the notification is mark as read or not
+- Bulk history clearing
 
 ### Continue Watching
 
@@ -200,10 +205,10 @@ curl -X GET http://localhost:5000/api/auth/me \\
   -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 ```
 
-| Header | Value | Required |
-|--------|-------|----------|
+| Header          | Value                | Required               |
+| --------------- | -------------------- | ---------------------- |
 | `Authorization` | `Bearer <jwt_token>` | Yes (protected routes) |
-| `Content-Type` | `application/json` | Yes (POST/PUT/PATCH) |
+| `Content-Type`  | `application/json`   | Yes (POST/PUT/PATCH)   |
 
 ---
 
@@ -533,11 +538,11 @@ Retrieve user\'s watchlist with optional filtering.
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `status` | string | No | Filter by status: `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped` |
-| `page` | integer | No | Page number (default: 1) |
-| `limit` | integer | No | Items per page (default: 20, max: 100) |
+| Parameter | Type    | Required | Description                                                                      |
+| --------- | ------- | -------- | -------------------------------------------------------------------------------- |
+| `status`  | string  | No       | Filter by status: `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped` |
+| `page`    | integer | No       | Page number (default: 1)                                                         |
+| `limit`   | integer | No       | Items per page (default: 20, max: 100)                                           |
 
 **Example:** `GET /api/watchlist?status=watching&page=1&limit=10`
 
@@ -681,6 +686,93 @@ Check if specific anime is in user\'s watchlist.
 
 ---
 
+### Watchlist Endpoints
+
+#### Trigger notification generation
+
+Trigger notification generation manually for an anime
+
+**Endpoint:** `GET /api/notification/test-notifications`
+
+**Authentication:** Required
+
+**Success Response (200 OK):**
+
+```json
+{
+  "message": "done"
+}
+```
+
+---
+
+#### Get notification
+
+Get notification for an anime
+
+**Endpoint:** `GET /api/notification/`
+
+**Authentication:** Required
+
+**Success Response (200 OK):**
+
+```json
+[
+  {
+    "_id": "69907dbcf5b50fc7ea995bb3",
+    "user": "698ddafdb442eb8a682b6de1",
+    "animeId": "dead-account-20301",
+    "animeTitle": "Dead Account",
+    "animeImage": "https://cdn.noitatnemucod.net/thumbnail/300x400/100/b368556479b832ee553e4c9f35dfeee1.jpg",
+    "message": "New episode of Dead Account airs soon!",
+    "type": "NEXT_EPISODE",
+    "read": false,
+    "airingTime": "2026-02-14T15:00:00.000Z",
+    "createdAt": "2026-02-14T13:50:52.010Z",
+    "updatedAt": "2026-02-14T13:50:52.010Z",
+    "__v": 0
+  }
+]
+```
+
+---
+
+#### Read notification
+
+Read notification for an anime
+
+**Endpoint:** `GET /api/notification/:id/read`
+
+**Authentication:** Required
+
+**Success Response (200 OK):**
+
+```json
+{
+  "message": "Marked as read"
+}
+```
+
+---
+
+#### Clear notification
+
+Clear all notification for an anime
+
+**Endpoint:** `GET /api/notification/clear`
+
+**Authentication:** Required
+
+**Success Response (200 OK):**
+
+```json
+{
+  "message": "All cleared"
+}
+```
+
+---
+
 ### Continue Watching Endpoints
 
 #### Update Progress
@@ -742,9 +834,9 @@ Retrieve list of anime with saved progress, sorted by most recent.
 
 **Query Parameters:**
 
-| Parameter | Type | Required | Description |
-|-----------|------|----------|-------------|
-| `limit` | integer | No | Number of items (default: 20) |
+| Parameter | Type    | Required | Description                   |
+| --------- | ------- | -------- | ----------------------------- |
+| `limit`   | integer | No       | Number of items (default: 20) |
 
 **Success Response (200 OK):**
 
@@ -847,18 +939,18 @@ The API uses conventional HTTP response codes and returns structured error respo
 
 ### HTTP Status Codes
 
-| Code | Status | Description |
-|------|--------|-------------|
-| 200 | OK | Request succeeded |
-| 201 | Created | Resource created successfully |
-| 400 | Bad Request | Invalid request parameters |
-| 401 | Unauthorized | Missing or invalid authentication token |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource not found |
-| 409 | Conflict | Resource already exists (duplicate entry) |
-| 422 | Unprocessable Entity | Validation error |
-| 429 | Too Many Requests | Rate limit exceeded |
-| 500 | Internal Server Error | Server error |
+| Code | Status                | Description                               |
+| ---- | --------------------- | ----------------------------------------- |
+| 200  | OK                    | Request succeeded                         |
+| 201  | Created               | Resource created successfully             |
+| 400  | Bad Request           | Invalid request parameters                |
+| 401  | Unauthorized          | Missing or invalid authentication token   |
+| 403  | Forbidden             | Insufficient permissions                  |
+| 404  | Not Found             | Resource not found                        |
+| 409  | Conflict              | Resource already exists (duplicate entry) |
+| 422  | Unprocessable Entity  | Validation error                          |
+| 429  | Too Many Requests     | Rate limit exceeded                       |
+| 500  | Internal Server Error | Server error                              |
 
 ### Error Response Format
 
@@ -872,15 +964,15 @@ The API uses conventional HTTP response codes and returns structured error respo
 
 ### Common Error Scenarios
 
-| Scenario | Status Code | Message |
-|----------|-------------|---------|
-| Invalid email format | 422 | "Please provide a valid email" |
-| Duplicate email | 409 | "Email already registered" |
-| Wrong password | 401 | "Invalid credentials" |
-| Missing token | 401 | "Not authorized to access this route" |
-| Expired token | 401 | "Token expired, please login again" |
-| Anime already in watchlist | 409 | "Anime already in watchlist" |
-| Validation failed | 422 | "Validation failed" with details array |
+| Scenario                   | Status Code | Message                                |
+| -------------------------- | ----------- | -------------------------------------- |
+| Invalid email format       | 422         | "Please provide a valid email"         |
+| Duplicate email            | 409         | "Email already registered"             |
+| Wrong password             | 401         | "Invalid credentials"                  |
+| Missing token              | 401         | "Not authorized to access this route"  |
+| Expired token              | 401         | "Token expired, please login again"    |
+| Anime already in watchlist | 409         | "Anime already in watchlist"           |
+| Validation failed          | 422         | "Validation failed" with details array |
 
 ---
 
@@ -890,22 +982,22 @@ To protect the API from abuse, rate limiting is implemented on authentication en
 
 ### Limits
 
-| Endpoint | Limit | Window |
-|----------|-------|--------|
-| `POST /api/auth/register` | 5 requests | 15 minutes |
-| `POST /api/auth/login` | 5 requests | 15 minutes |
-| `POST /api/auth/forgot-password` | 5 requests | 15 minutes |
-| All other endpoints | 100 requests | 15 minutes |
+| Endpoint                         | Limit        | Window     |
+| -------------------------------- | ------------ | ---------- |
+| `POST /api/auth/register`        | 5 requests   | 15 minutes |
+| `POST /api/auth/login`           | 5 requests   | 15 minutes |
+| `POST /api/auth/forgot-password` | 5 requests   | 15 minutes |
+| All other endpoints              | 100 requests | 15 minutes |
 
 ### Rate Limit Headers
 
 When rate limit is approached, these headers are included in responses:
 
-| Header | Description |
-|--------|-------------|
-| `X-RateLimit-Limit` | Maximum requests allowed per window |
-| `X-RateLimit-Remaining` | Requests remaining in current window |
-| `Retry-After` | Seconds until limit resets (when exceeded) |
+| Header                  | Description                                |
+| ----------------------- | ------------------------------------------ |
+| `X-RateLimit-Limit`     | Maximum requests allowed per window        |
+| `X-RateLimit-Remaining` | Requests remaining in current window       |
+| `Retry-After`           | Seconds until limit resets (when exceeded) |
 
 ---
 
@@ -974,19 +1066,19 @@ When rate limit is approached, these headers are included in responses:
 
 ### Required Variables
 
-| Variable | Description | Example |
-|----------|-------------|---------|
-| `PORT` | Server port | `5000` |
-| `NODE_ENV` | Environment mode | `development` |
-| `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/anime_streaming` |
-| `JWT_SECRET` | Secret key for JWT signing | `your-secret-key-min-32-chars` |
-| `JWT_EXPIRE` | Token expiration time | `7d` |
-| `EMAIL_HOST` | SMTP server host | `smtp.gmail.com` |
-| `EMAIL_PORT` | SMTP server port | `587` |
-| `EMAIL_USER` | SMTP username | `your-email@gmail.com` |
-| `EMAIL_PASS` | SMTP password | `app-specific-password` |
-| `EMAIL_FROM` | From address for emails | `Anime Stream <noreply@animestream.com>` |
-| `FRONTEND_URL` | Frontend application URL | `http://localhost:3000` |
+| Variable       | Description                | Example                                     |
+| -------------- | -------------------------- | ------------------------------------------- |
+| `PORT`         | Server port                | `5000`                                      |
+| `NODE_ENV`     | Environment mode           | `development`                               |
+| `MONGODB_URI`  | MongoDB connection string  | `mongodb://localhost:27017/anime_streaming` |
+| `JWT_SECRET`   | Secret key for JWT signing | `your-secret-key-min-32-chars`              |
+| `JWT_EXPIRE`   | Token expiration time      | `7d`                                        |
+| `EMAIL_HOST`   | SMTP server host           | `smtp.gmail.com`                            |
+| `EMAIL_PORT`   | SMTP server port           | `587`                                       |
+| `EMAIL_USER`   | SMTP username              | `your-email@gmail.com`                      |
+| `EMAIL_PASS`   | SMTP password              | `app-specific-password`                     |
+| `EMAIL_FROM`   | From address for emails    | `Anime Stream <noreply@animestream.com>`    |
+| `FRONTEND_URL` | Frontend application URL   | `http://localhost:3000`                     |
 
 ---
 

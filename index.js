@@ -12,6 +12,8 @@ import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import watchlistRoutes from "./routes/watchlistRoutes.js";
 import continueWatchingRoutes from "./routes/continueWatchingRoutes.js";
+import notificationRoutes from "./routes/notificationRoutes.js";
+import { startEpisodeJob } from "./jobs/episodeNotificationJob.js";
 
 // Load env vars
 dotenv.config();
@@ -31,6 +33,8 @@ app.use(
     credentials: true,
   }),
 );
+
+startEpisodeJob();
 
 // Rate limiting
 const limiter = rateLimit({
@@ -77,6 +81,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/continue-watching", continueWatchingRoutes);
+app.use("/api/notification", notificationRoutes);
 
 // 404 handler
 app.use((req, res) => {

@@ -43,6 +43,13 @@ const userSchema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
+    notificationIgnore: {
+      watching: { type: Boolean, default: false },
+      on_hold: { type: Boolean, default: false },
+      plan_to_watch: { type: Boolean, default: false },
+      completed: { type: Boolean, default: false },
+      dropped: { type: Boolean, default: false },
+    },
   },
   {
     timestamps: true,
