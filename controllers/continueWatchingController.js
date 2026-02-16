@@ -8,12 +8,14 @@ export const updateProgress = async (req, res) => {
   try {
     const {
       animeId,
+      episodeId,
       animeTitle,
       animeImage,
       currentEpisode,
       currentTime = 0,
       duration = 0,
       episodeTitle = "",
+      
     } = req.body;
 
     // Use findOneAndUpdate with upsert to create or update
@@ -22,6 +24,7 @@ export const updateProgress = async (req, res) => {
       {
         user: req.user.id,
         animeId,
+        episodeId,
         animeTitle,
         animeImage,
         currentEpisode,
@@ -31,8 +34,8 @@ export const updateProgress = async (req, res) => {
         lastWatched: Date.now(),
       },
       {
-        new: true,
-        upsert: true, // Create if doesn't exist
+        returnDocument: "after",
+        upsert: true,
         runValidators: true,
       },
     );

@@ -12,6 +12,10 @@ const continueWatchingSchema = new mongoose.Schema(
       type: String,
       required: [true, "Anime ID is required"],
     },
+    episodeId: {
+      type: String,
+      required: [true, "Episode ID is required"],
+    },
     animeTitle: {
       type: String,
       required: [true, "Anime title is required"],
