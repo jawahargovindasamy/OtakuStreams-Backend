@@ -29,6 +29,47 @@ export const updateProfile = async (req, res) => {
   }
 };
 
+// @desc    Update user settings
+// @route   PUT /api/users/settings
+// @access  Private
+
+export const updateSettings = async (req, res) => {
+  try {
+    const { watching, on_hold, plan_to_watch, completed, dropped } = req.body;
+    const updateData = {};
+
+    if (watching !== undefined)
+      updateData["notificationIgnore.watching"] = watching;
+    if (on_hold !== undefined)
+      updateData["notificationIgnore.on_hold"] = on_hold;
+    if (plan_to_watch !== undefined)
+      updateData["notificationIgnore.plan_to_watch"] = plan_to_watch;
+    if (completed !== undefined)
+      updateData["notificationIgnore.completed"] = completed;
+    if (dropped !== undefined)
+      updateData["notificationIgnore.dropped"] = dropped;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    );
+
+    res.status(STATUS_CODES.SUCCESS).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    res.status(STATUS_CODES.SERVER_ERROR).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Delete user account
 // @route   DELETE /api/users/account
 // @access  Private
