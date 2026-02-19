@@ -91,6 +91,7 @@ export const login = async (req, res) => {
         email: user.email,
         role: user.role,
         avatar: user.avatar,
+        notificationIgnore: user.notificationIgnore,
         token: generateToken(user._id),
         createdAt: user.createdAt,
       },

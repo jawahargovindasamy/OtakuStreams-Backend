@@ -59,31 +59,18 @@ export const addToWatchlist = async (req, res) => {
 // @access  Private
 export const getWatchlist = async (req, res) => {
   try {
-    const { status, page = 1, limit = 20 } = req.query;
+    const { status } = req.query;
 
     const query = { user: req.user.id };
     if (status && Object.values(WATCH_STATUS).includes(status)) {
       query.status = status;
     }
 
-    const skip = (Number(page) - 1) * Number(limit);
-
-    const watchlist = await Watchlist.find(query)
-      .sort({ updatedAt: -1 })
-      .skip(skip)
-      .limit(Number(limit));
-
-    const total = await Watchlist.countDocuments(query);
+    const watchlist = await Watchlist.find(query).sort({ updatedAt: -1 });
 
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       data: watchlist,
-      pagination: {
-        page: Number(page),
-        limit: Number(limit),
-        total,
-        pages: Math.ceil(total / Number(limit)),
-      },
     });
   } catch (error) {
     res.status(STATUS_CODES.SERVER_ERROR).json({
