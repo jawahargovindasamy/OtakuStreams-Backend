@@ -14,7 +14,7 @@ import watchlistRoutes from "./routes/watchlistRoutes.js";
 import continueWatchingRoutes from "./routes/continueWatchingRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import { startEpisodeJob } from "./jobs/episodeNotificationJob.js";
-import {startScheduleJob} from "./jobs/scheduleJob.js"
+import { startScheduleJob } from "./jobs/scheduleJob.js";
 
 // Load env vars
 dotenv.config();
@@ -28,12 +28,7 @@ const app = express();
 app.use(helmet());
 
 // CORS configuration
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    credentials: true,
-  }),
-);
+app.use(cors());
 
 startEpisodeJob();
 startScheduleJob();
