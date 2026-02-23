@@ -1,11 +1,14 @@
 import Notification from "../models/Notification.js";
 
 export const getNotifications = async (req, res) => {
-  const data = await Notification.find({ user: req.user.id }).sort({
-    createdAt: -1,
-  });
-
-  res.json(data);
+  try {
+    const data = await Notification.find({ user: req.user.id }).sort({
+      createdAt: -1,
+    });
+    res.json(data);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 export const markAsRead = async (req, res) => {

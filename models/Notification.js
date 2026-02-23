@@ -25,10 +25,18 @@ const notificationSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-
-    airingTime: Date,
+    episode: {
+      type: Number,
+      required: true,
+    },
+    episodeId: {
+      type: String,
+      required: true,
+    },
   },
   { timestamps: true },
 );
+
+notificationSchema.index({ user: 1, animeId: 1, episode: 1 }, { unique: true });
 
 export default mongoose.model("Notification", notificationSchema);

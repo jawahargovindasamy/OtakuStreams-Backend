@@ -14,6 +14,7 @@ import watchlistRoutes from "./routes/watchlistRoutes.js";
 import continueWatchingRoutes from "./routes/continueWatchingRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import { startEpisodeJob } from "./jobs/episodeNotificationJob.js";
+import {startScheduleJob} from "./jobs/scheduleJob.js"
 
 // Load env vars
 dotenv.config();
@@ -35,6 +36,7 @@ app.use(
 );
 
 startEpisodeJob();
+startScheduleJob();
 
 // Rate limiting
 const limiter = rateLimit({
