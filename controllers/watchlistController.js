@@ -1,5 +1,6 @@
 import Watchlist, { WATCH_STATUS } from "../models/Watchlist.js";
 import { STATUS_CODES } from "../constants/statusCodes.js";
+import logger from "../utils/logger.js";
 
 // @desc    Add anime to watchlist
 // @route   POST /api/watchlist
@@ -24,6 +25,10 @@ export const addToWatchlist = async (req, res) => {
     });
 
     if (exists) {
+      logger.warn("Add to watchlist conflict", {
+        userId: req.user.id,
+        animeId,
+      });
       return res.status(STATUS_CODES.CONFLICT).json({
         success: false,
         message: "Anime already in watchlist. Use update endpoint to modify.",
@@ -42,11 +47,23 @@ export const addToWatchlist = async (req, res) => {
       notes,
     });
 
+    logger.info("Anime added to watchlist", {
+      userId: req.user.id,
+      animeId,
+      status,
+    });
+
     res.status(STATUS_CODES.CREATED).json({
       success: true,
       data: watchlistItem,
     });
   } catch (error) {
+    logger.error("Add to watchlist failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -68,11 +85,23 @@ export const getWatchlist = async (req, res) => {
 
     const watchlist = await Watchlist.find(query).sort({ updatedAt: -1 });
 
+    logger.info("Watchlist fetched", {
+      userId: req.user.id,
+      count: watchlist.length,
+      filter: status || "none",
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       data: watchlist,
     });
   } catch (error) {
+    logger.error("Get watchlist failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -123,11 +152,22 @@ export const getWatchlistStats = async (req, res) => {
       formattedStats.averageRating = (totalRating / ratedCount).toFixed(2);
     }
 
+    logger.info("Watchlist stats fetched", {
+      userId: req.user.id,
+      total: formattedStats.total,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       data: formattedStats,
     });
   } catch (error) {
+    logger.error("Watchlist stats failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -148,6 +188,11 @@ export const updateWatchlistItem = async (req, res) => {
     });
 
     if (!watchlistItem) {
+      logger.warn("Update watchlist item not found", {
+        userId: req.user.id,
+        itemId: req.params.id,
+      });
+
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
         message: "Watchlist item not found",
@@ -162,11 +207,22 @@ export const updateWatchlistItem = async (req, res) => {
 
     await watchlistItem.save();
 
+    logger.info("Watchlist item updated", {
+      userId: req.user.id,
+      itemId: req.params.id,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       data: watchlistItem,
     });
   } catch (error) {
+    logger.error("Update watchlist item failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -185,17 +241,32 @@ export const removeFromWatchlist = async (req, res) => {
     });
 
     if (!watchlistItem) {
+      logger.warn("Remove watchlist item not found", {
+        userId: req.user.id,
+        itemId: req.params.id,
+      });
+
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
         message: "Watchlist item not found",
       });
     }
 
+    logger.info("Watchlist item removed", {
+      userId: req.user.id,
+      itemId: req.params.id,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       message: "Removed from watchlist",
     });
   } catch (error) {
+    logger.info("Watchlist item removed", {
+      userId: req.user.id,
+      itemId: req.params.id,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -213,6 +284,12 @@ export const checkWatchlistStatus = async (req, res) => {
       animeId: req.params.animeId,
     });
 
+    logger.info("Watchlist check performed", {
+      userId: req.user.id,
+      animeId: req.params.animeId,
+      inWatchlist: !!item,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       data: {
@@ -221,6 +298,12 @@ export const checkWatchlistStatus = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error("Check watchlist status failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+    
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,

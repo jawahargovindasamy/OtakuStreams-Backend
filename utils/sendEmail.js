@@ -1,4 +1,5 @@
 import createTransporter from "../config/email.js";
+import logger from "../utils/logger.js";
 
 const sendEmail = async (options) => {
   const transporter = createTransporter();
@@ -13,15 +14,28 @@ const sendEmail = async (options) => {
 
   try {
     const info = await transporter.sendMail(message);
-    console.log("Email sent: %s", info.messageId);
+    logger.info("Email sent successfully", {
+      to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"), // mask email
+      subject: options.subject,
+      messageId: info.messageId,
+    });
     return true;
   } catch (error) {
-    console.error("Email send error:", error);
-    throw new Error("Email could not be sent");
+    logger.error("Email sending failed", {
+      to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"),
+      subject: options.subject,
+      message: error.message,
+    });
+    const err = new Error("Email could not be sent");
+    err.statusCode = 500;
+    throw err;
   }
 };
 
 export const sendPasswordResetEmail = async (email, newPassword) => {
+  logger.info("Password reset email triggered", {
+    email: email?.replace(/(.{2}).+(@.+)/, "$1***$2"),
+  });
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #333;">Password Reset Request</h2>
@@ -43,6 +57,9 @@ export const sendPasswordResetEmail = async (email, newPassword) => {
 };
 
 export const sendPasswordChangedEmail = async (email) => {
+  logger.info("Password changed confirmation email triggered", {
+    email: email?.replace(/(.{2}).+(@.+)/, "$1***$2"),
+  });
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #333;">Password Changed Successfully</h2>

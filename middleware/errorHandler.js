@@ -1,53 +1,68 @@
-import { STATUS_CODES } from '../constants/statusCodes.js';
+import { STATUS_CODES } from "../constants/statusCodes.js";
+import logger from "../utils/logger.js";
 
 const errorHandler = (err, req, res, next) => {
-  let error = { ...err };
-  error.message = err.message;
+  const statusCode = err.statusCode || STATUS_CODES.SERVER_ERROR;
+  const message = err.message || "Server Error";
 
-  console.error('Error:', err);
+  logger.error("API Error", {
+    method: req.method,
+    url: req.originalUrl,
+    statusCode,
+    message: err.message,
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
+  });
 
   // Mongoose bad ObjectId
-  if (err.name === 'CastError') {
-    error.message = 'Resource not found';
+  if (err.name === "CastError") {
     return res.status(STATUS_CODES.NOT_FOUND).json({
       success: false,
-      message: error.message,
+      message: "Resource not found",
     });
   }
 
   // Mongoose duplicate key
   if (err.code === 11000) {
     const field = Object.keys(err.keyValue)[0];
-    error.message = `${field} already exists`;
     return res.status(STATUS_CODES.CONFLICT).json({
       success: false,
-      message: error.message,
+      message: `${field} already exists`,
       field,
     });
   }
 
   // Mongoose validation error
-  if (err.name === 'ValidationError') {
-    const messages = Object.values(err.errors).map((val) => val.message);
+  if (err.name === "ValidationError") {
+    const errors = Object.values(err.errors || {}).map((val) => val.message);
+
     return res.status(STATUS_CODES.UNPROCESSABLE).json({
       success: false,
-      message: 'Validation Error',
-      errors: messages,
+      message: "Validation Error",
+      errors,
     });
   }
 
   // JWT errors
-  if (err.name === 'JsonWebTokenError') {
+  if (err.name === "JsonWebTokenError") {
     return res.status(STATUS_CODES.UNAUTHORIZED).json({
       success: false,
-      message: 'Invalid token',
+      message: "Invalid token",
     });
   }
 
-  res.status(err.statusCode || STATUS_CODES.SERVER_ERROR).json({
+  if (err.name === "TokenExpiredError") {
+    return res.status(STATUS_CODES.UNAUTHORIZED).json({
+      success: false,
+      message: "Token expired",
+    });
+  }
+
+  return res.status(statusCode).json({
     success: false,
-    message: error.message || 'Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+    message,
+    ...(process.env.NODE_ENV === "development" && {
+      stack: err.stack,
+    }),
   });
 };
 

@@ -6,6 +6,7 @@ import {
   sendPasswordChangedEmail,
 } from "../utils/sendEmail.js";
 import { STATUS_CODES, ERROR_MESSAGES } from "../constants/statusCodes.js";
+import logger from "../utils/logger.js";
 
 // @desc    Register new user
 // @route   POST /api/auth/register
@@ -14,10 +15,21 @@ export const register = async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
+    logger.info("Register attempt", {
+      email,
+      username,
+      ip: req.ip,
+    });
+
     // Check if user exists
     const userExists = await User.findOne({ $or: [{ email }, { username }] });
 
     if (userExists) {
+      logger.warn("Register failed - User already exists", {
+        email,
+        username,
+      });
+
       return res.status(STATUS_CODES.CONFLICT).json({
         success: false,
         message:
@@ -35,6 +47,11 @@ export const register = async (req, res) => {
     });
 
     if (user) {
+      logger.info("User registered successfully", {
+        userId: user._id,
+        email: user.email,
+      });
+
       res.status(STATUS_CODES.CREATED).json({
         success: true,
         data: {
@@ -49,6 +66,11 @@ export const register = async (req, res) => {
       });
     }
   } catch (error) {
+    logger.error("Register error", {
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -63,10 +85,17 @@ export const login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    logger.info("Login attempt", {
+      email,
+      ip: req.ip,
+    });
+
     // Check for user email
     const user = await User.findOne({ email }).select("+password");
 
     if (!user) {
+      logger.warn("Login failed", { email });
+
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
         success: false,
         message: ERROR_MESSAGES.INVALID_CREDENTIALS,
@@ -77,11 +106,20 @@ export const login = async (req, res) => {
     const isMatch = await user.comparePassword(password);
 
     if (!isMatch) {
+      logger.warn("Login failed", {
+        userId: user._id,
+      });
+
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
         success: false,
         message: ERROR_MESSAGES.INVALID_CREDENTIALS,
       });
     }
+
+    logger.info("User logged in successfully", {
+      userId: user._id,
+      email: user.email,
+    });
 
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
@@ -97,6 +135,11 @@ export const login = async (req, res) => {
       },
     });
   } catch (error) {
+    logger.error("Login error", {
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -109,6 +152,10 @@ export const login = async (req, res) => {
 // @access  Private
 export const getMe = async (req, res) => {
   try {
+    logger.info("Fetch current user", {
+      userId: req.user.id,
+    });
+
     const user = await User.findById(req.user.id);
 
     res.status(STATUS_CODES.SUCCESS).json({
@@ -116,6 +163,11 @@ export const getMe = async (req, res) => {
       data: user,
     });
   } catch (error) {
+    logger.error("GetMe error", {
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -130,9 +182,16 @@ export const forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
 
+    logger.info("Forgot password request", {
+      email,
+      ip: req.ip,
+    });
+
     const user = await User.findOne({ email });
 
     if (!user) {
+      logger.warn("Forgot password - Email not found", { email });
+
       // Return success even if user not found (security best practice)
       return res.status(STATUS_CODES.SUCCESS).json({
         success: true,
@@ -151,19 +210,31 @@ export const forgotPassword = async (req, res) => {
     try {
       await sendPasswordResetEmail(email, newPassword);
 
+      logger.info("Password reset email sent", {
+        userId: user._id,
+      });
+
       res.status(STATUS_CODES.SUCCESS).json({
         success: true,
         message: "Password reset email sent successfully",
       });
     } catch (emailError) {
-      // If email fails, revert password change
-      console.error("Email send failed:", emailError);
+      logger.error("Password reset email failed", {
+        message: emailError.message,
+        userId: user._id,
+      });
+
       return res.status(STATUS_CODES.SERVER_ERROR).json({
         success: false,
         message: "Failed to send reset email. Please try again later.",
       });
     }
   } catch (error) {
+    logger.error("Forgot password error", {
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -178,12 +249,20 @@ export const resetPassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
 
+    logger.info("Reset password attempt", {
+      userId: req.user.id,
+    });
+
     const user = await User.findById(req.user.id).select("+password");
 
     // Check current password
     const isMatch = await user.comparePassword(currentPassword);
 
     if (!isMatch) {
+      logger.warn("Reset password failed - Incorrect password", {
+        userId: req.user.id,
+      });
+
       return res.status(STATUS_CODES.BAD_REQUEST).json({
         success: false,
         message: "Current password is incorrect",
@@ -197,11 +276,20 @@ export const resetPassword = async (req, res) => {
     // Send confirmation email
     await sendPasswordChangedEmail(user.email);
 
+    logger.info("Password updated successfully", {
+      userId: user._id,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       message: "Password updated successfully",
     });
   } catch (error) {
+    logger.error("Reset password error", {
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -213,6 +301,10 @@ export const resetPassword = async (req, res) => {
 // @route   POST /api/auth/logout
 // @access  Private
 export const logout = async (req, res) => {
+  logger.info("User logged out", {
+    userId: req.user?.id,
+  });
+
   // Since we're using JWT, we don't need to do anything server-side
   // The client should remove the token
   res.status(STATUS_CODES.SUCCESS).json({

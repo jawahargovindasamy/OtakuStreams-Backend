@@ -1,5 +1,6 @@
 import ContinueWatching from "../models/ContinueWatching.js";
 import { STATUS_CODES } from "../constants/statusCodes.js";
+import logger from "../utils/logger.js";
 
 // @desc    Update or create continue watching entry
 // @route   POST /api/continue-watching
@@ -15,7 +16,6 @@ export const updateProgress = async (req, res) => {
       currentTime = 0,
       duration = 0,
       episodeTitle = "",
-      
     } = req.body;
 
     // Use findOneAndUpdate with upsert to create or update
@@ -40,11 +40,23 @@ export const updateProgress = async (req, res) => {
       },
     );
 
+    logger.info("Continue watching updated", {
+      userId: req.user.id,
+      animeId,
+      episodeId,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       data: progress,
     });
   } catch (error) {
+    logger.error("Update progress failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -63,12 +75,23 @@ export const getContinueWatching = async (req, res) => {
       .sort({ lastWatched: -1 })
       .limit(Number(limit));
 
+    logger.info("Fetched continue watching list", {
+      userId: req.user.id,
+      count: entries.length,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       count: entries.length,
       data: entries,
     });
   } catch (error) {
+    logger.error("Fetch continue watching failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -87,6 +110,11 @@ export const getAnimeProgress = async (req, res) => {
     });
 
     if (!progress) {
+      logger.warn("Anime progress not found", {
+        userId: req.user.id,
+        animeId: req.params.animeId,
+      });
+
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
         message: "No progress found for this anime",
@@ -98,6 +126,12 @@ export const getAnimeProgress = async (req, res) => {
       data: progress,
     });
   } catch (error) {
+    logger.error("Fetch anime progress failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -116,17 +150,33 @@ export const deleteProgress = async (req, res) => {
     });
 
     if (!result) {
+      logger.warn("Delete progress failed - not found", {
+        userId: req.user.id,
+        animeId: req.params.animeId,
+      });
+
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
         message: "Progress not found",
       });
     }
 
+    logger.info("Progress deleted", {
+      userId: req.user.id,
+      animeId: req.params.animeId,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       message: "Progress deleted successfully",
     });
   } catch (error) {
+    logger.error("Delete progress failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,
@@ -141,11 +191,21 @@ export const clearAllProgress = async (req, res) => {
   try {
     await ContinueWatching.deleteMany({ user: req.user.id });
 
+    logger.info("All continue watching cleared", {
+      userId: req.user.id,
+    });
+
     res.status(STATUS_CODES.SUCCESS).json({
       success: true,
       message: "All watch history cleared",
     });
   } catch (error) {
+    logger.error("Clear all progress failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
     res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
       message: error.message,

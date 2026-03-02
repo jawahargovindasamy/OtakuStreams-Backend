@@ -1,6 +1,7 @@
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { STATUS_CODES, ERROR_MESSAGES } from "../constants/statusCodes.js";
+import logger from "../utils/logger.js";
 
 export const protect = async (req, res, next) => {
   let token;
@@ -20,6 +21,10 @@ export const protect = async (req, res, next) => {
       req.user = await User.findById(decoded.id).select("-password");
 
       if (!req.user) {
+        logger.warn("JWT valid but user not found", {
+          userId: decoded.id,
+        });
+
         return res.status(STATUS_CODES.UNAUTHORIZED).json({
           success: false,
           message: ERROR_MESSAGES.USER_NOT_FOUND,
@@ -34,6 +39,11 @@ export const protect = async (req, res, next) => {
           message: ERROR_MESSAGES.TOKEN_EXPIRED,
         });
       }
+
+      logger.warn("JWT verification failed", {
+        message: error.message,
+      });
+
       return res.status(STATUS_CODES.UNAUTHORIZED).json({
         success: false,
         message: ERROR_MESSAGES.UNAUTHORIZED,
