@@ -31,8 +31,8 @@ app.use(helmet());
 // CORS configuration
 app.use(cors());
 
-// startEpisodeJob();
-// startScheduleJob();
+startEpisodeJob();
+startScheduleJob();
 
 // Body parser
 app.use(express.json());
