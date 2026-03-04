@@ -3,7 +3,6 @@ import dotenv from "dotenv";
 import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
-import rateLimit from "express-rate-limit";
 import connectDB from "./config/database.js";
 import errorHandler from "./middleware/errorHandler.js";
 import logger from "./utils/logger.js";
@@ -14,6 +13,7 @@ import userRoutes from "./routes/userRoutes.js";
 import watchlistRoutes from "./routes/watchlistRoutes.js";
 import continueWatchingRoutes from "./routes/continueWatchingRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
+import randomRoutes from "./routes/randomRoutes.js";
 import { startEpisodeJob } from "./jobs/episodeNotificationJob.js";
 import { startScheduleJob } from "./jobs/scheduleJob.js";
 
@@ -31,8 +31,8 @@ app.use(helmet());
 // CORS configuration
 app.use(cors());
 
-startEpisodeJob();
-startScheduleJob();
+// startEpisodeJob();
+// startScheduleJob();
 
 // Body parser
 app.use(express.json());
@@ -76,6 +76,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/watchlist", watchlistRoutes);
 app.use("/api/continue-watching", continueWatchingRoutes);
 app.use("/api/notification", notificationRoutes);
+app.use("/api/random", randomRoutes);
 
 // 404 handler
 app.use((req, res) => {
