@@ -9,7 +9,7 @@ export const startScheduleJob = () => {
     timezone: "Asia/Kolkata",
   });
 
-  // Run daily at 1 AM
+  // Run daily at 12:15 AM
   cron.schedule(
     "15 0 * * *",
     async () => {

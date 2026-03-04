@@ -6,13 +6,10 @@ export const syncTodaySchedule = async () => {
   const startTime = Date.now();
 
   try {
-    const now = new Date();
-
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-
-    const todayStr = `${year}-${month}-${day}`;
+    
+    const todayStr = new Date().toLocaleDateString("en-CA", {
+      timeZone: "Asia/Kolkata",
+    });
 
     logger.info("Schedule sync started", {
       date: todayStr,
@@ -49,7 +46,7 @@ export const syncTodaySchedule = async () => {
               isNotified: false,
             },
           },
-          { upsert: true }
+          { upsert: true },
         );
 
         if (result.upsertedCount > 0) {
@@ -72,7 +69,6 @@ export const syncTodaySchedule = async () => {
       newInserted: upsertedCount,
       duration: `${duration}ms`,
     });
-
   } catch (error) {
     logger.error("Schedule sync job crashed", {
       message: error.message,
