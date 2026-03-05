@@ -16,11 +16,6 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-    type: {
-      type: String,
-      enum: ["NEXT_EPISODE"],
-      default: "NEXT_EPISODE",
-    },
     read: {
       type: Boolean,
       default: false,
