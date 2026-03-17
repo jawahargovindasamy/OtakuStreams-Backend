@@ -78,6 +78,10 @@ app.use("/api/continue-watching", continueWatchingRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/random", randomRoutes);
 
+app.get("/", (req, res) => {
+  res.send("Otakustreams API running 🚀");
+});
+
 // 404 handler
 app.use((req, res) => {
   logger.warn("Route not found", {
@@ -104,39 +108,39 @@ const server = app.listen(PORT, () => {
   });
 
   // Start keep-alive ping after server starts (only in production)
-  if (process.env.NODE_ENV === "production") {
-    startKeepAlive();
-  }
+  // if (process.env.NODE_ENV === "production") {
+  //   startKeepAlive();
+  // }
 });
 
 // Keep-alive function to prevent Render sleep
-const startKeepAlive = () => {
-  // Use SELF_PING_URL for local or RENDER_EXTERNAL_URL for production
-  const PING_URL = process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
+// const startKeepAlive = () => {
+//   // Use SELF_PING_URL for local or RENDER_EXTERNAL_URL for production
+//   const PING_URL = process.env.RENDER_EXTERNAL_URL || process.env.SELF_PING_URL;
 
-  if (!PING_URL) {
-    logger.warn("Keep-alive not started - No ping URL provided");
-    return;
-  }
+//   if (!PING_URL) {
+//     logger.warn("Keep-alive not started - No ping URL provided");
+//     return;
+//   }
 
-  logger.info("Keep-alive started", {
-    url: `${PING_URL}/health`,
-    interval: "8 minutes",
-  });
+//   logger.info("Keep-alive started", {
+//     url: `${PING_URL}/health`,
+//     interval: "8 minutes",
+//   });
 
-  const PING_INTERVAL = 8 * 60 * 1000; // 8 minutes
+//   const PING_INTERVAL = 8 * 60 * 1000; // 8 minutes
 
-  setInterval(async () => {
-    try {
-      await fetch(`${PING_URL}/health`);
-      logger.info("Keep-alive ping successful");
-    } catch (err) {
-      logger.error("Keep-alive ping failed", {
-        message: err.message,
-      });
-    }
-  }, PING_INTERVAL);
-};
+//   setInterval(async () => {
+//     try {
+//       await fetch(`${PING_URL}/health`);
+//       logger.info("Keep-alive ping successful");
+//     } catch (err) {
+//       logger.error("Keep-alive ping failed", {
+//         message: err.message,
+//       });
+//     }
+//   }, PING_INTERVAL);
+// };
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {
