@@ -34,7 +34,15 @@ export const generateEpisodeNotifications = async () => {
         });
 
         // 1️⃣ Fetch episode list
-        const { episodes } = await fetchEpisodesCount(animeId);
+        const { episodes, totalEpisodes } = await fetchEpisodesCount(animeId);
+
+        if (totalEpisodes === 0) {
+          logger.info("Episode not uploaded yet (new season)", {
+            animeId,
+            episode,
+          });
+          continue;
+        }
 
         if (!episodes || !episodes.length) {
           logger.warn("No episodes returned from API", { animeId });
