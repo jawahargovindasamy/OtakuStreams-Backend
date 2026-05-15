@@ -16,6 +16,8 @@ export const updateProgress = async (req, res) => {
       currentTime = 0,
       duration = 0,
       episodeTitle = "",
+      dub = "no",
+      server = "",
     } = req.body;
 
     // Use findOneAndUpdate with upsert to create or update
@@ -31,6 +33,8 @@ export const updateProgress = async (req, res) => {
         currentTime,
         duration,
         episodeTitle,
+        dub,
+        server,
         lastWatched: Date.now(),
       },
       {

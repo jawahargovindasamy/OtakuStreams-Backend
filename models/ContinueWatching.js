@@ -43,6 +43,14 @@ const continueWatchingSchema = new mongoose.Schema(
       type: String,
       default: "",
     },
+    dub: {
+      type: String,
+      default: "no",
+    },
+    server: {
+      type: String,
+      default: "",
+    },
     lastWatched: {
       type: Date,
       default: Date.now,

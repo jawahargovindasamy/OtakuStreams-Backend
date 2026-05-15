@@ -89,4 +89,9 @@ export const continueWatchingValidation = [
     .optional()
     .isInt({ min: 0 })
     .withMessage("Duration must be a positive number"),
+  body("dub")
+    .optional()
+    .isIn(["yes", "no"])
+    .withMessage("Dub must be either 'yes' or 'no'"),
+  body("server").optional().isString().withMessage("Server must be a string"),
 ];
