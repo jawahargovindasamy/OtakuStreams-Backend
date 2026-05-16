@@ -50,6 +50,10 @@ const userSchema = new mongoose.Schema(
       completed: { type: Boolean, default: false },
       dropped: { type: Boolean, default: false },
     },
+    preferences: {
+      audio: { type: String, enum: ["sub", "dub"], default: "sub" },
+      server: { type: String, enum: ["hd-1", "hd-2"], default: "hd-1" },
+    },
   },
   {
     timestamps: true,

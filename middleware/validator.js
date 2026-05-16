@@ -95,3 +95,14 @@ export const continueWatchingValidation = [
     .withMessage("Dub must be either 'yes' or 'no'"),
   body("server").optional().isString().withMessage("Server must be a string"),
 ];
+
+export const userPreferencesValidation = [
+  body("audio")
+    .optional()
+    .isIn(["sub", "dub"])
+    .withMessage("Audio preference must be either 'sub' or 'dub'"),
+  body("server")
+    .optional()
+    .isIn(["hd-1", "hd-2"])
+    .withMessage("Server preference must be either 'hd-1' or 'hd-2'"),
+];

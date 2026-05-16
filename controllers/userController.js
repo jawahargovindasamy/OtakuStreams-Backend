@@ -115,6 +115,96 @@ export const updateSettings = async (req, res) => {
   }
 };
 
+// @desc    Get user preferences
+// @route   GET /api/users/preferences
+// @access  Private
+export const getPreferences = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("preferences");
+
+    if (!user) {
+      logger.warn("Get preferences failed - user not found", {
+        userId: req.user.id,
+      });
+
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    res.status(STATUS_CODES.SUCCESS).json({
+      success: true,
+      data: user.preferences,
+    });
+  } catch (error) {
+    logger.error("Get preferences failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
+    res.status(STATUS_CODES.SERVER_ERROR).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// @desc    Update user preferences (audio, server)
+// @route   PUT /api/users/preferences
+// @access  Private
+export const updatePreferences = async (req, res) => {
+  try {
+    const { audio, server } = req.body;
+    const updateData = {};
+
+    if (audio !== undefined) updateData["preferences.audio"] = audio;
+    if (server !== undefined) updateData["preferences.server"] = server;
+
+    const user = await User.findByIdAndUpdate(
+      req.user.id,
+      { $set: updateData },
+      {
+        returnDocument: "after",
+        runValidators: true,
+      },
+    );
+
+    if (!user) {
+      logger.warn("Update preferences failed - user not found", {
+        userId: req.user.id,
+      });
+
+      return res.status(STATUS_CODES.NOT_FOUND).json({
+        success: false,
+        message: "User not found",
+      });
+    }
+
+    logger.info("User preferences updated", {
+      userId: req.user.id,
+      updatedFields: Object.keys(updateData),
+    });
+
+    res.status(STATUS_CODES.SUCCESS).json({
+      success: true,
+      data: user,
+    });
+  } catch (error) {
+    logger.error("Update preferences failed", {
+      userId: req.user?.id,
+      message: error.message,
+      stack: error.stack,
+    });
+
+    res.status(STATUS_CODES.SERVER_ERROR).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
 // @desc    Delete user account
 // @route   DELETE /api/users/account
 // @access  Private
