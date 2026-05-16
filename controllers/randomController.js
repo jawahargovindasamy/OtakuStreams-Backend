@@ -1,67 +1,71 @@
 import axios from "axios";
 import { STATUS_CODES } from "../constants/statusCodes.js";
 
-const BASE_URL = "https://aniwatch-bj2r.onrender.com/api/v2/hianime/category";
+const ANILIST_URL = "https://graphql.anilist.co";
 
-const RANDOM_ENDPOINTS = [
-  "most-favorite",
-  "most-popular",
-  "subbed-anime",
-  "dubbed-anime",
-  "recently-updated",
-  "recently-added",
-  "top-airing",
-  "movie",
-  "special",
-  "ova",
-  "ona",
-  "tv",
-  "completed",
-];
-
-const MIN_PAGE = 1;
-const MAX_PAGE = 20;
+const query = `
+  query ($page: Int, $perPage: Int) {
+    Page(page: $page, perPage: $perPage) {
+      media(type: ANIME, sort: TRENDING_DESC) {
+        id
+        title {
+          romaji
+          english
+        }
+        coverImage {
+          extraLarge
+          large
+        }
+        type
+        format
+      }
+    }
+  }
+`;
 
 export const getRandomAnime = async (req, res) => {
   try {
-    const randomEndpoint =
-      RANDOM_ENDPOINTS[Math.floor(Math.random() * RANDOM_ENDPOINTS.length)];
+    // Pick a random page between 1 and 10 to get variety from trending anime
+    const randomPage = Math.floor(Math.random() * 10) + 1;
+    const perPage = 20;
 
-    const randomPage =
-      Math.floor(Math.random() * (MAX_PAGE - MIN_PAGE + 1)) + MIN_PAGE;
+    const response = await axios.post(ANILIST_URL, {
+      query,
+      variables: {
+        page: randomPage,
+        perPage: perPage,
+      },
+    });
 
-    const url = `${BASE_URL}/${randomEndpoint}?page=${randomPage}`;
-
-    const response = await axios.get(url);
-
-    const animes = response.data?.data?.animes || [];
+    const animes = response.data?.data?.Page?.media || [];
 
     if (!animes.length) {
       return res.status(STATUS_CODES.NOT_FOUND).json({
         success: false,
-        message: "No anime found on random page",
+        message: "No anime found on AniList",
       });
     }
 
+    // Pick a random anime from the results
     const randomAnime = animes[Math.floor(Math.random() * animes.length)];
 
     return res.status(STATUS_CODES.SUCCESS).json({
       success: true,
-      source: randomEndpoint,
+      source: "AniList",
       page: randomPage,
       data: {
-        id: randomAnime.id,
-        name: randomAnime.name,
-        poster: randomAnime.poster,
-        type: randomAnime.type,
+        id: randomAnime.id.toString(),
+        name: randomAnime.title.english || randomAnime.title.romaji,
+        poster: randomAnime.coverImage.extraLarge || randomAnime.coverImage.large,
+        type: randomAnime.format || randomAnime.type,
       },
     });
   } catch (error) {
-    console.error("Random Anime Error:", error.message);
+    console.error("AniList Random Anime Error:", error.response?.data || error.message);
 
     return res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
-      message: "Failed to fetch random anime",
+      message: "Failed to fetch random anime from AniList",
     });
   }
 };
