@@ -19,8 +19,20 @@ if (!fs.existsSync(logDir)) {
    Base Format (timestamp + stack)
 --------------------------------------------------- */
 
+const timezoned = () => {
+  return new Date().toLocaleString("sv-SE", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+};
+
 const baseFormat = winston.format.combine(
-  winston.format.timestamp({ format: "YYYY-MM-DD HH:mm:ss" }),
+  winston.format.timestamp({ format: timezoned }),
   winston.format.errors({ stack: true })
 );
 
