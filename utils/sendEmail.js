@@ -76,4 +76,38 @@ export const sendPasswordChangedEmail = async (email) => {
   });
 };
 
+export const sendWelcomeEmail = async (email, username) => {
+  logger.info("Welcome email triggered", {
+    email: email?.replace(/(.{2}).+(@.+)/, "$1***$2"),
+  });
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9f9f9; padding: 20px; border-radius: 10px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <h1 style="color: #6C5CE7; margin: 0;">OtakuStreams</h1>
+      </div>
+      <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <h2 style="color: #333; margin-top: 0;">Welcome to the club, ${username}! 🎉</h2>
+        <p style="color: #555; line-height: 1.6; font-size: 16px;">We are absolutely thrilled to have you join the OtakuStreams community! Your anime journey is about to get a whole lot better.</p>
+        
+        <p style="color: #555; line-height: 1.6; font-size: 16px;">Here is what you can do right now to get started:</p>
+        <ul style="color: #555; line-height: 1.6; font-size: 16px; padding-left: 20px;">
+          <li style="margin-bottom: 10px;"><strong>Build Your Watchlist:</strong> Keep track of everything you're watching, completed, or planning to watch.</li>
+          <li style="margin-bottom: 10px;"><strong>Never Miss an Episode:</strong> We will automatically notify you the moment a new episode of your favorite anime airs!</li>
+          <li style="margin-bottom: 10px;"><strong>Continue Watching:</strong> We'll save your exact playback timestamp so you can jump right back into the action.</li>
+        </ul>
+        
+        <p style="color: #555; line-height: 1.6; font-size: 16px; margin-top: 25px;">Grab your snacks, get comfortable, and enjoy the show!</p>
+        <p style="color: #555; line-height: 1.6; font-size: 16px;">— The OtakuStreams Team 💖</p>
+      </div>
+    </div>
+  `;
+
+  await sendEmail({
+    to: email,
+    subject: `🎉 Welcome to OtakuStreams, ${username}! Your Anime Journey Starts Here ✨`,
+    text: `Welcome to OtakuStreams, ${username}! We are thrilled to have you join our community.`,
+    html,
+  });
+};
+
 export default sendEmail;

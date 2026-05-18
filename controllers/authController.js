@@ -4,6 +4,7 @@ import { generateRandomPassword } from "../utils/generatePassword.js";
 import {
   sendPasswordResetEmail,
   sendPasswordChangedEmail,
+  sendWelcomeEmail,
 } from "../utils/sendEmail.js";
 import { STATUS_CODES, ERROR_MESSAGES } from "../constants/statusCodes.js";
 import logger from "../utils/logger.js";
@@ -50,6 +51,11 @@ export const register = async (req, res) => {
       logger.info("User registered successfully", {
         userId: user._id,
         email: user.email,
+      });
+
+      // Send welcome email asynchronously
+      sendWelcomeEmail(user.email, user.username).catch((err) => {
+        logger.error("Failed to send welcome email", { error: err.message });
       });
 
       res.status(STATUS_CODES.CREATED).json({
