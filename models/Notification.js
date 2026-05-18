@@ -26,7 +26,9 @@ const notificationSchema = new mongoose.Schema(
     },
     episodeId: {
       type: String,
-      required: true,
+    },
+    malId: {
+      type: String,
     },
   },
   { timestamps: true },

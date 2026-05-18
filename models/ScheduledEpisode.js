@@ -7,6 +7,9 @@ const scheduledEpisodeSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    malId: {
+      type: String,
+    },
     animeTitle: {
       type: String,
     },

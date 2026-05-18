@@ -1,7 +1,7 @@
+import axios from "axios";
 import Notification from "../models/Notification.js";
 import Watchlist from "../models/Watchlist.js";
 import ScheduledEpisode from "../models/ScheduledEpisode.js";
-import { fetchEpisodesCount } from "../utils/apiClient.js";
 import logger from "../utils/logger.js";
 
 export const generateEpisodeNotifications = async () => {
@@ -11,58 +11,74 @@ export const generateEpisodeNotifications = async () => {
 
     const pendingEpisodes = await ScheduledEpisode.find({
       isNotified: false,
+      airingTimestamp: { $lte: Date.now() },
     });
 
     if (!pendingEpisodes.length) {
-      logger.info("No pending scheduled episodes found");
+      logger.info("No pending scheduled episodes found that have aired");
       return;
     }
 
-    logger.info("Pending episodes found", {
+    logger.info("Pending aired episodes found", {
       count: pendingEpisodes.length,
     });
 
     let totalNotificationsSent = 0;
+    
+    const headers = {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+      Referer: "https://megaplay.buzz/",
+    };
 
     for (const scheduled of pendingEpisodes) {
-      const { animeId, episode } = scheduled;
+      const { animeId, malId, episode } = scheduled;
 
       try {
-        logger.debug("Processing scheduled episode", {
+        logger.debug("Checking Megaplay availability", {
           animeId,
+          malId,
           episode,
         });
 
-        // 1️⃣ Fetch episode list
-        const { episodes, totalEpisodes } = await fetchEpisodesCount(animeId);
+        const subPatterns = [
+          `https://megaplay.buzz/stream/ani/${animeId}/${episode}/sub`,
+        ];
+        if (malId) {
+          subPatterns.push(`https://megaplay.buzz/stream/mal/${malId}/${episode}/sub`);
+        }
 
-        if (totalEpisodes === 0) {
-          logger.info("Episode not uploaded yet (new season)", {
+        let isAvailable = false;
+
+        for (const url of subPatterns) {
+          try {
+            const response = await axios.get(url, { headers, timeout: 8000 });
+            const bodyStr =
+              typeof response.data === "string"
+                ? response.data
+                : JSON.stringify(response.data);
+
+            if (
+              response.status === 200 &&
+              !bodyStr.includes("Oops! Something went wrong")
+            ) {
+              isAvailable = true;
+              break;
+            }
+          } catch (error) {
+            // Silently fail and try next pattern if any
+          }
+        }
+
+        if (!isAvailable) {
+          logger.info("Episode not uploaded on Megaplay yet", {
             animeId,
             episode,
           });
           continue;
         }
 
-        if (!episodes || !episodes.length) {
-          logger.warn("No episodes returned from API", { animeId });
-          continue;
-        }
-
-        // 2️⃣ Check if specific episode exists
-        const episodeData = episodes.find((ep) => ep.number === episode);
-
-        if (!episodeData) {
-          logger.info("Episode not uploaded yet", {
-            animeId,
-            episode,
-          });
-          continue;
-        }
-
-        const episodeId = episodeData.episodeId;
-
-        // 3️⃣ Get watchlist users
+        // Get watchlist users
         const watchlistItems = await Watchlist.find({
           animeId,
         }).populate({
@@ -72,7 +88,6 @@ export const generateEpisodeNotifications = async () => {
 
         if (!watchlistItems.length) {
           logger.info("No users watching this anime", { animeId });
-          // No users → mark as done
           scheduled.isNotified = true;
           await scheduled.save();
           continue;
@@ -89,10 +104,10 @@ export const generateEpisodeNotifications = async () => {
           notifications.push({
             user: user._id,
             animeId,
+            malId,
             animeTitle: item.animeTitle,
             animeImage: item.animeImage,
             episode,
-            episodeId,
             message: `Episode ${episode} of ${item.animeTitle} is now available!`,
           });
         }
@@ -115,7 +130,6 @@ export const generateEpisodeNotifications = async () => {
           });
         }
 
-        // 4️⃣ Mark as notified
         scheduled.isNotified = true;
         await scheduled.save();
       } catch (error) {
