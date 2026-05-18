@@ -1,30 +1,41 @@
-import createTransporter from "../config/email.js";
+import axios from "axios";
 import logger from "../utils/logger.js";
 
 const sendEmail = async (options) => {
-  const transporter = createTransporter();
+  const apiKey = process.env.RESEND_API_KEY;
+  
+  if (!apiKey) {
+    logger.error("RESEND_API_KEY is not defined in environment variables");
+    throw new Error("Email service is not configured properly");
+  }
 
   const message = {
-    from: process.env.EMAIL_FROM,
-    to: options.to,
+    from: process.env.EMAIL_FROM, // Note: For Resend, this must be a verified domain
+    to: [options.to],
     subject: options.subject,
     text: options.text,
     html: options.html,
   };
 
   try {
-    const info = await transporter.sendMail(message);
-    logger.info("Email sent successfully", {
+    const res = await axios.post("https://api.resend.com/emails", message, {
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    logger.info("Email sent successfully via Resend", {
       to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"), // mask email
       subject: options.subject,
-      messageId: info.messageId,
+      id: res.data?.id,
     });
     return true;
   } catch (error) {
     logger.error("Email sending failed", {
       to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"),
       subject: options.subject,
-      message: error.message,
+      message: error.response?.data?.message || error.message,
     });
     const err = new Error("Email could not be sent");
     err.statusCode = 500;
