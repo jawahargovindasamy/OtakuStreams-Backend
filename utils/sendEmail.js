@@ -2,40 +2,41 @@ import axios from "axios";
 import logger from "../utils/logger.js";
 
 const sendEmail = async (options) => {
-  const apiKey = process.env.RESEND_API_KEY;
+  const scriptUrl = process.env.GOOGLE_SCRIPT_URL;
   
-  if (!apiKey) {
-    logger.error("RESEND_API_KEY is not defined in environment variables");
+  if (!scriptUrl) {
+    logger.error("GOOGLE_SCRIPT_URL is not defined in environment variables");
     throw new Error("Email service is not configured properly");
   }
 
   const message = {
-    from: process.env.EMAIL_FROM, // Note: For Resend, this must be a verified domain
-    to: [options.to],
+    to: options.to,
     subject: options.subject,
     text: options.text,
     html: options.html,
   };
 
   try {
-    const res = await axios.post("https://api.resend.com/emails", message, {
+    const res = await axios.post(scriptUrl, message, {
       headers: {
-        Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
       },
     });
 
-    logger.info("Email sent successfully via Resend", {
-      to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"), // mask email
+    if (res.data && res.data.status === "error") {
+      throw new Error(res.data.message);
+    }
+
+    logger.info("Email sent successfully via Google Apps Script", {
+      to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"),
       subject: options.subject,
-      id: res.data?.id,
     });
     return true;
   } catch (error) {
     logger.error("Email sending failed", {
       to: options.to?.replace(/(.{2}).+(@.+)/, "$1***$2"),
       subject: options.subject,
-      message: error.response?.data?.message || error.message,
+      message: error.message,
     });
     const err = new Error("Email could not be sent");
     err.statusCode = 500;
