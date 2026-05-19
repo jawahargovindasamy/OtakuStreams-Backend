@@ -14,7 +14,7 @@ export const updateProfile = async (req, res) => {
     if (avatar) updateData.avatar = avatar;
 
     const user = await User.findByIdAndUpdate(req.user.id, updateData, {
-      new: true,
+      returnDocument: "after",
       runValidators: true,
     });
 
