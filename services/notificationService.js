@@ -3,6 +3,7 @@ import Notification from "../models/Notification.js";
 import Watchlist from "../models/Watchlist.js";
 import ScheduledEpisode from "../models/ScheduledEpisode.js";
 import logger from "../utils/logger.js";
+import { getIO } from "./socketService.js";
 
 export const generateEpisodeNotifications = async () => {
   const jobStart = Date.now();
@@ -113,17 +114,51 @@ export const generateEpisodeNotifications = async () => {
         }
 
         if (notifications.length) {
-          await Notification.insertMany(notifications, {
-            ordered: false,
-          });
+          let insertedNotifications = [];
+          try {
+            insertedNotifications = await Notification.insertMany(notifications, {
+              ordered: false,
+            });
+          } catch (error) {
+            // MongoBulkWriteError stores successfully inserted docs in error.insertedDocs
+            if (error.insertedDocs) {
+              insertedNotifications = error.insertedDocs;
+            } else {
+              logger.error("Failed to insert notifications", { message: error.message });
+            }
+          }
 
-          totalNotificationsSent += notifications.length;
+          if (insertedNotifications.length) {
+            totalNotificationsSent += insertedNotifications.length;
 
-          logger.info("Notifications sent", {
-            animeId,
-            episode,
-            count: notifications.length,
-          });
+            logger.info("Notifications sent", {
+              animeId,
+              episode,
+              count: insertedNotifications.length,
+            });
+
+            // Emit the notifications in real-time via Socket.IO
+            try {
+              const io = getIO();
+              for (const notif of insertedNotifications) {
+                if (notif.user) {
+                  // Emit only to the verified user's secure room (the user's ID as room name)
+                  io.to(notif.user.toString()).emit("newNotification", notif);
+                }
+              }
+              logger.info("Real-time notifications emitted via Socket.IO", {
+                count: insertedNotifications.length,
+              });
+            } catch (socketError) {
+              logger.error("Socket emit failed in episode notification job", {
+                message: socketError.message,
+              });
+            }
+          } else {
+            logger.info("No new eligible notifications to send (duplicates or skipped)", {
+              animeId,
+            });
+          }
         } else {
           logger.info("No eligible users for notification", {
             animeId,

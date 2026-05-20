@@ -4,8 +4,10 @@ import cors from "cors";
 import helmet from "helmet";
 import morgan from "morgan";
 import connectDB from "./config/database.js";
+import { createServer } from "http";
 import errorHandler from "./middleware/errorHandler.js";
 import logger from "./utils/logger.js";
+import { initializeSocket } from "./services/socketService.js";
 
 // Route imports
 import authRoutes from "./routes/authRoutes.js";
@@ -24,6 +26,7 @@ dotenv.config();
 connectDB();
 
 const app = express();
+const httpServer = createServer(app);
 
 // Security middleware
 app.use(helmet());
@@ -101,7 +104,10 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-const server = app.listen(PORT, () => {
+// Initialize socket service
+initializeSocket(httpServer);
+
+const server = httpServer.listen(PORT, () => {
   logger.info("Server started", {
     port: PORT,
     environment: process.env.NODE_ENV,
