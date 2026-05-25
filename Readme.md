@@ -1,1175 +1,308 @@
-> **Version:** 1.0.0  
-> **Last Updated:** 2026-02-14  
-> **License:** ISC  
-> **Repository:** https://github.com/jawahargovindasamy/OtakuStreams-Backend.git
-
-Production-ready REST API for anime streaming applications with authentication, watchlist management, and progress tracking.
+<div align="center">
+  <h1>🌸 OtakuStreams Backend API</h1>
+  <p><strong>A production-ready, highly secure REST & WebSocket API powering the OtakuStreams ecosystem.</strong></p>
+  <p>
+    <a href="#1-scope-and-overview">Scope & Overview</a> •
+    <a href="#2-file-and-folder-overview">File Structure</a> •
+    <a href="#3-installation-and-setup">Installation</a> •
+    <a href="#4-usage-and-endpoints">API Routes & Config</a> •
+    <a href="#5-architecture-and-design">Architecture</a> •
+    <a href="#6-development-and-testing">Development</a> •
+    <a href="#7-deployment">Deployment</a> •
+    <a href="#8-cicd-monitoring-and-security">Security & Sockets</a> •
+    <a href="#9-troubleshooting">Troubleshooting</a> •
+    <a href="#10-contributing-and-contact">Contributing</a> •
+    <a href="#11-license-and-credits">License</a>
+  </p>
+  <p>
+    <img alt="Node.js" src="https://img.shields.io/badge/Node.js-18%2B-green.svg?style=flat-square&logo=nodedotjs" />
+    <img alt="Express" src="https://img.shields.io/badge/Express-4.x-black.svg?style=flat-square&logo=express" />
+    <img alt="MongoDB" src="https://img.shields.io/badge/MongoDB-6%2B-brightgreen.svg?style=flat-square&logo=mongodb" />
+    <img alt="Mongoose" src="https://img.shields.io/badge/Mongoose-7.x-red.svg?style=flat-square&logo=mongoose" />
+    <img alt="Socket.io" src="https://img.shields.io/badge/Socket.io-4.x-blue.svg?style=flat-square&logo=socketdotio" />
+    <img alt="License: ISC" src="https://img.shields.io/badge/License-ISC-blue.svg?style=flat-square" />
+  </p>
+</div>
 
 ---
 
-## Table of Contents
+## 1) Scope and Overview
 
-- [Overview](#overview)
-- [Features](#features)
-- [Getting Started](#getting-started)
-- [Authentication](#authentication)
-- [Base URL](#base-url)
-- [API Endpoints](#api-endpoints)
-- [Error Handling](#error-handling)
-- [Rate Limiting](#rate-limiting)
-- [Database Schema](#database-schema)
-- [Environment Variables](#environment-variables)
-- [Deployment](#deployment)
-- [Support](#support)
+The **OtakuStreams Backend API** is the powerhouse behind the OtakuStreams ecosystem. It manages highly-secured user sessions, keeps track of users' watchlists and episode consumption, maps evolution patterns of airing anime, and dispatches real-time upload alerts using WebSockets.
 
----
-
-## Overview
-
-The Anime Streaming Backend API provides a complete server-side solution for anime streaming platforms. Built with **Node.js**, **Express**, and **MongoDB**, it offers secure user authentication, comprehensive watchlist management with five status categories, notification for the anime added in watchlist, and continue-watching progress tracking.
+### Core Goals
+1. **Bulletproof Authentication:** Secure registration, password hashing (bcrypt), and JSON Web Token (JWT) session generation.
+2. **Flexible Watchlist Organization:** Tabbed tracking across five states (`plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped`) with custom reviews, ratings, and note-taking.
+3. **Continue Watching Synchronization:** Captures playback progress down to the exact second, letting users sync resume coordinates instantly.
+4. **Intelligent Event Dispatching:** Combines automated daily schedule synchronizations (via the AniList API) with precision cron tasks to verify video uploads and emit instant WebSocket events.
 
 ### Tech Stack
-
-- **Runtime:** Node.js 18+
-- **Framework:** Express.js 4.x
-- **Database:** MongoDB 6+ with Mongoose
-- **Authentication:** JWT (JSON Web Tokens)
-- **Security:** Helmet, bcrypt, express-rate-limit
-- **Email Service:** Nodemailer
-
----
-
-## Features
-
-### Authentication & Security
-
-- JWT-based authentication with refresh token support
-- Secure password hashing with bcrypt
-- Rate limiting on authentication endpoints
-- Input validation and sanitization
-- CORS protection
-- Security headers via Helmet
-
-### User Management
-
-- User registration and login
-- Profile management
-- Password reset via email
-- Account deletion
-
-### Watchlist System
-
-- Five status categories: `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped`
-- Episode tracking and rating system (1-10)
-- Personal notes for each anime
-- Statistics and analytics
-- Duplicate prevention
-
-### Notification
-
-- Get notification for the anime in the watchlist based on need notification
-- Update the notification is mark as read or not
-- Bulk history clearing
-
-### Continue Watching
-
-- Progress tracking per episode
-- Timestamp synchronization (resume playback)
-- Automatic history management
-- Bulk history clearing
+- **Node.js (v18+) & Express.js:** Fast and minimalist web framework.
+- **MongoDB & Mongoose:** Persistent, schema-enforced relational document structures.
+- **Socket.IO:** Low-latency WebSockets layer for real-time client push notifications.
+- **Node-Cron:** Precision back-end cron scheduler.
+- **Winston & Morgan:** Unified, structured file logging utilizing high-performance streams.
+- **Nodemailer:** Simple SMTP engine for automated password recovery.
 
 ---
 
-## Getting Started
+## 2) File and Folder Overview
+
+The backend is structured into highly cohesive modules representing routes, database collections, API controllers, and scheduler engines.
+
+```
+/
+├── config/                 # Database connectors and custom parameters
+│   └── database.js         # Mongoose MongoDB connection pooling logic
+├── constants/              # System-wide enum collections
+│   └── statusCodes.js      # Explicit HTTP response status codes mapping
+├── controllers/            # Request routers & business logic controllers
+│   ├── authController.js   # User registrations, logins, and password resets
+│   ├── userController.js   # User profiles customization and account deletion
+│   ├── watchlistController.js# CRUD operations on users' watchlist items
+│   ├── continueWatchingController.js # Handles video playback progress saving
+│   ├── notificationController.js # Fetching, reading, and clearing alerts
+│   └── randomController.js # AniList API random trending query
+├── jobs/                   # Background Node-Cron schedules
+│   ├── scheduleJob.js      # Daily airing schedule synchronization (12:15 AM IST)
+│   └── episodeNotificationJob.js # Scans airing episodes for uploads (Every 30m)
+├── middleware/             # Request pre-processors and controllers
+│   ├── authMiddleware.js   # JWT verification and route protection
+│   ├── errorHandler.js     # Global catch-all exceptions converter
+│   └── rateLimiter.js      # express-rate-limit brute force blocker
+├── models/                 # Database Schema definitions
+│   ├── User.js             # User accounts, security salts, and profile preferences
+│   ├── Watchlist.js        # Personal anime lists, notes, and progress metrics
+│   ├── ContinueWatching.js # Exact episode playback progress track indices
+│   ├── ScheduledEpisode.js # Synchronized AniList schedule items
+│   └── Notification.js     # Unread, read, and bulk-cleared notification logs
+├── routes/                 # Express route entry tables mapping to controllers
+│   ├── authRoutes.js
+│   ├── userRoutes.js
+│   ├── watchlistRoutes.js
+│   ├── continueWatchingRoutes.js
+│   ├── notificationRoutes.js
+│   └── randomRoutes.js
+├── services/               # Core utility services and API connectors
+│   ├── notificationService.js # Scans video uploads and creates DB records
+│   ├── scheduleService.js  # Polls AniList for airing timetables
+│   └── socketService.js    # Express HTTP server Socket.IO lifecycle binder
+├── utils/                  # Miscellaneous modules
+│   └── logger.js           # Winston logger piping to stderr and files
+├── .env.example            # Environment variables placeholder
+├── index.js                # System bootstrapping file containing keep-alive self-pings
+├── package.json            # Script commands and dependencies tracker
+└── package-lock.json       # Strict versions freeze map
+```
+
+---
+
+## 3) Installation and Setup
 
 ### Prerequisites
+- **Node.js:** `v18.x.x` or higher
+- **MongoDB:** `v6.x.x` or higher (Local database server or MongoDB Atlas connection)
 
-- **Node.js** >= 18.0.0
-- **MongoDB** >= 6.0 (local or Atlas)
-- **npm** >= 9.0.0
-- **Email Service** (Gmail SMTP or other provider)
+### Local Development Setup
 
-### Installation
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/jawahargovindasamy/OtakuStreams-Backend.git
+   cd OtakuStreams-Backend
+   ```
 
-```bash
-# Clone the repository
-git clone https://github.com/jawahargovindasamy/OtakuStreams-Backend.git
-cd OtakuStreams-Backend
+2. **Install all production and development dependencies:**
+   ```bash
+   npm install
+   ```
 
-# Install dependencies
-npm install
+3. **Configure the Environment:**
+   Create a `.env` file using the template:
+   ```bash
+   cp .env.example .env
+   ```
+   Open the newly created `.env` file and customize the variables:
+   ```env
+   PORT=5000
+   NODE_ENV=development
+   MONGODB_URI=mongodb://localhost:27017/anime_streaming
+   JWT_SECRET=your_super_secret_jwt_key_min_32_characters_long
+   JWT_EXPIRE=7d
+   EMAIL_HOST=smtp.gmail.com
+   EMAIL_PORT=587
+   EMAIL_USER=your_email@gmail.com
+   EMAIL_PASS=your_app_specific_password
+   EMAIL_FROM=Anime Stream <noreply@animestream.com>
+   FRONTEND_URL=http://localhost:5173
+   ```
 
-# Setup environment variables
-cp .env.example .env
+4. **Start the Application:**
+   * **Development Mode (with auto-reload):**
+     ```bash
+     npm run dev
+     ```
+   * **Production Mode:**
+     ```bash
+     npm start
+     ```
+   *The server will boot up on port `5000`.*
 
-# Edit .env with your configuration
-nano .env
+---
+
+## 4) Usage and Endpoints
+
+The API enforces strict response parameters, utilizing JWT authentication inside client headers.
+
+### Detailed Endpoint Map
+
+#### 🔑 Authentication (`/api/auth`)
+* `POST /register` - Creates account. Rate limited to 5 requests per 15 minutes.
+* `POST /login` - Signs in and returns JWT token. Rate limited to 5 requests per 15 minutes.
+* `POST /forgot-password` - Resets and mails a random password to the user.
+* `POST /reset-password` - Changes password (Requires active Auth header).
+* `GET /me` - Returns logged-in profile data (Requires active Auth header).
+* `POST /logout` - Standard session end indicator.
+
+#### 👤 Profile customization (`/api/users`)
+* `PUT /profile` - Edits username, avatar URL, and notification ignore states.
+* `DELETE /account` - Deletes account and wipes database watchlist and history logs.
+
+#### 📁 Watchlist (`/api/watchlist`)
+* `POST /` - Saves an anime record (`animeId`, `status`, `notes`, `rating`).
+* `GET /` - Fetches watchlist items (Filters by `status`, parses pagination).
+* `GET /stats` - Returns user's aggregated watchlist counts and mean ratings.
+* `PUT /:id` - Edits specific watchlist indices (e.g. increments episode counts).
+* `DELETE /:id` - Deletes specific watchlist entries.
+* `GET /check/:animeId` - Confirms if an anime exists in the user's watchlist.
+
+#### ⏳ Continue Watching Playback (`/api/continue-watching`)
+* `POST /` - Synchronizes progress (`animeId`, `currentTime`, `duration`).
+* `GET /` - Returns history array sorted by last watched date.
+* `GET /:animeId` - Pulls progress details of a single anime.
+* `DELETE /:animeId` - Wipes progress history of a specific anime.
+* `DELETE /` - Clears entire viewing logs database of the user.
+
+#### 🔔 Notification Alerts (`/api/notification`)
+* `GET /` - Returns user's notification list.
+* `GET /:id/read` - Marks an alert as read.
+* `GET /clear` - Flushes entire notification lists.
+* `GET /test-notifications` - Triggers the notification checking daemon manually (Admin/Test).
+
+---
+
+## 5) Architecture and Design
+
 ```
-
-### Environment Setup
-
-Create a `.env` file with the following variables:
-
-```env
-# Server Configuration
-PORT=5000
-NODE_ENV=development
-
-# Database
-MONGODB_URI=mongodb://localhost:27017/anime_streaming
-
-# JWT Configuration
-JWT_SECRET=your_super_secret_jwt_key_min_32_characters_long
-JWT_EXPIRE=7d
-
-# Email Configuration (Gmail SMTP)
-EMAIL_HOST=smtp.gmail.com
-EMAIL_PORT=587
-EMAIL_USER=your_email@gmail.com
-EMAIL_PASS=your_app_specific_password
-EMAIL_FROM=Anime Stream <noreply@animestream.com>
-
-# Frontend URL
-FRONTEND_URL=http://localhost:5173
-```
-
-### Running the Server
-
-```bash
-# Development mode with hot reload
-npm run dev
-
-# Production mode
-npm start
-```
-
-**Success Output:**
-
-```
-Server running in development mode on port 5000
-MongoDB Connected: localhost
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                            HTTP & WEBSOCKET ENGINE                          │
+│                                                                             │
+│                    HTTP REST Pipeline   ┌────────────────┐                  │
+│    ┌───────────────┐ ─────────────────➔ │  Express App   │                  │
+│    │  React Client │                    └────────┬───────┘                  │
+│    └───────┬───────┘                             │                          │
+│            │                                     ├─➔ [Morgan Log Pipeline]  │
+│            │ WebSocket Channels                  │          │               │
+│            │ (Real-Time notification push)       ▼          ▼               │
+│            └───────────────────────────► [Socket.IO] [Winston Logger]       │
+│                                                  │                          │
+└──────────────────────────────────────────────────┼──────────────────────────┘
+                                                   │
+                                                   ▼
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                             SCHEDULER & DATABASE                            │
+│                                                                             │
+│    ┌────────────────┐   node-cron daemon    ┌──────────┐                    │
+│    │ Scheduled Jobs │ ────────────────────➔ │ Mongo DB │                    │
+│    └────────────────┘                       └──────────┘                    │
+│            │                                                                │
+│            ├─➔ [scheduleJob.js] ──➔ Sync Daily timetables from AniList      │
+│            └─➔ [episodeNotificationJob.js] ─➔ Probe Megaplay Buzz streams   │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## Authentication
+## 6) Development and Testing
 
-The API uses Bearer Token authentication. Include the JWT token in the Authorization header for protected endpoints.
-
-### Obtaining a Token
-
-**Register a new account:**
-
-```bash
-curl -X POST http://localhost:5000/api/auth/register \\
-  -H "Content-Type: application/json" \\
-  -d \'{
-    "username": "animefan123",
-    "email": "user@example.com",
-    "password": "securepassword123"
-  }\'
-```
-
-**Login:**
-
-```bash
-curl -X POST http://localhost:5000/api/auth/login \\
-  -H "Content-Type: application/json" \\
-  -d \'{
-    "email": "user@example.com",
-    "password": "securepassword123"
-  }\'
-```
-
-**Response:**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439011",
-    "username": "animefan123",
-    "email": "user@example.com",
-    "role": "user",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
-### Using the Token
-
-Include the token in all subsequent requests:
-
-```bash
-curl -X GET http://localhost:5000/api/auth/me \\
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-```
-
-| Header          | Value                | Required               |
-| --------------- | -------------------- | ---------------------- |
-| `Authorization` | `Bearer <jwt_token>` | Yes (protected routes) |
-| `Content-Type`  | `application/json`   | Yes (POST/PUT/PATCH)   |
+- **Linting Rules:** The codebase utilizes strict ES Module constraints with standard ESLint rule controls.
+- **Log Management:** Winston logging records data into separate log files (`logs/err.log` and `logs/out.log`) utilizing colorized consoles for development and JSON formatters in production environments.
+- **Contribution Model:** Ensure all database queries utilize proper indexing, use standard status codes defined in `/constants/statusCodes.js`, and check all parameters through robust sanitization pipelines.
 
 ---
 
-## Base URL
+## 7) Deployment
 
-```
-Development: http://localhost:5000/api
-Production:  https://api.yourdomain.com/api
-Staging:     https://staging-api.yourdomain.com/api
-```
-
----
-
-## API Endpoints
-
-### Authentication Endpoints
-
-#### Register User
-
-Create a new user account.
-
-**Endpoint:** `POST /api/auth/register`
-
-**Rate Limit:** 5 requests per 15 minutes
-
-**Request Body:**
-
-```json
-{
-  "username": "animefan123",
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
-```
-
-**Validation Rules:**
-
-- `username`: 3-30 characters, alphanumeric + underscores only
-- `email`: Valid email format
-- `password`: Minimum 6 characters
-
-**Success Response (201 Created):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439011",
-    "username": "animefan123",
-    "email": "user@example.com",
-    "role": "user",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
-**Error Response (409 Conflict):**
-
-```json
-{
-  "success": false,
-  "message": "Email already registered"
-}
-```
-
----
-
-#### Login User
-
-Authenticate existing user.
-
-**Endpoint:** `POST /api/auth/login`
-
-**Rate Limit:** 5 requests per 15 minutes
-
-**Request Body:**
-
-```json
-{
-  "email": "user@example.com",
-  "password": "securepassword123"
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439011",
-    "username": "animefan123",
-    "email": "user@example.com",
-    "role": "user",
-    "avatar": "",
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }
-}
-```
-
----
-
-#### Get Current User
-
-Retrieve authenticated user profile.
-
-**Endpoint:** `GET /api/auth/me`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439011",
-    "username": "animefan123",
-    "email": "user@example.com",
-    "role": "user",
-    "avatar": "",
-    "createdAt": "2026-02-12T10:00:00.000Z",
-    "updatedAt": "2026-02-12T10:00:00.000Z"
-  }
-}
-```
-
----
-
-#### Forgot Password
-
-Generate random password and send via email.
-
-**Endpoint:** `POST /api/auth/forgot-password`
-
-**Rate Limit:** 5 requests per 15 minutes
-
-**Request Body:**
-
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Password reset email sent successfully"
-}
-```
-
-**Note:** A random 12-character password is generated and sent to the user\'s email. For security, the same success message is returned even if the email doesn\'t exist in the system.
-
----
-
-#### Reset Password (Authenticated)
-
-Change password while logged in.
-
-**Endpoint:** `POST /api/auth/reset-password`
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "currentPassword": "oldpassword123",
-  "newPassword": "newsecurepassword456"
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Password updated successfully"
-}
-```
-
----
-
-#### Logout
-
-Invalidate user session (client-side token removal).
-
-**Endpoint:** `POST /api/auth/logout`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Logged out successfully"
-}
-```
-
----
-
-### User Endpoints
-
-#### Update Profile
-
-Update user profile information.
-
-**Endpoint:** `PUT /api/users/profile`
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "username": "newusername",
-  "avatar": "https://cdn.example.com/avatar.jpg"
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "507f1f77bcf86cd799439011",
-    "username": "newusername",
-    "email": "user@example.com",
-    "avatar": "https://cdn.example.com/avatar.jpg"
-  }
-}
-```
-
----
-
-#### Delete Account
-
-Permanently delete user account and all associated data.
-
-**Endpoint:** `DELETE /api/users/account`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Account deleted successfully"
-}
-```
-
----
-
-### Watchlist Endpoints
-
-#### Add Anime to Watchlist
-
-Add a new anime to user\'s watchlist.
-
-**Endpoint:** `POST /api/watchlist`
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "animeId": "attack-on-titan-001",
-  "animeTitle": "Attack on Titan",
-  "animeImage": "https://cdn.example.com/aot.jpg",
-  "status": "watching",
-  "rating": 9,
-  "episodesWatched": 12,
-  "totalEpisodes": 25,
-  "notes": "Amazing storyline and animation!"
-}
-```
-
-**Status Options:** `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped`
-
-**Success Response (201 Created):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "65c1234567890abcdef12345",
-    "user": "507f1f77bcf86cd799439011",
-    "animeId": "attack-on-titan-001",
-    "animeTitle": "Attack on Titan",
-    "animeImage": "https://cdn.example.com/aot.jpg",
-    "status": "watching",
-    "rating": 9,
-    "episodesWatched": 12,
-    "totalEpisodes": 25,
-    "notes": "Amazing storyline and animation!",
-    "createdAt": "2026-02-12T10:30:00.000Z",
-    "updatedAt": "2026-02-12T10:30:00.000Z"
-  }
-}
-```
-
-**Error Response (409 Conflict):**
-
-```json
-{
-  "success": false,
-  "message": "Anime already in watchlist. Use update endpoint to modify."
-}
-```
-
----
-
-#### Get Watchlist
-
-Retrieve user\'s watchlist with optional filtering.
-
-**Endpoint:** `GET /api/watchlist`
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-| Parameter | Type    | Required | Description                                                                      |
-| --------- | ------- | -------- | -------------------------------------------------------------------------------- |
-| `status`  | string  | No       | Filter by status: `plan_to_watch`, `watching`, `on_hold`, `completed`, `dropped` |
-| `page`    | integer | No       | Page number (default: 1)                                                         |
-| `limit`   | integer | No       | Items per page (default: 20, max: 100)                                           |
-
-**Example:** `GET /api/watchlist?status=watching&page=1&limit=10`
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": [
-    {
-      "_id": "65c1234567890abcdef12345",
-      "animeId": "attack-on-titan-001",
-      "animeTitle": "Attack on Titan",
-      "animeImage": "https://cdn.example.com/aot.jpg",
-      "status": "watching",
-      "rating": 9,
-      "episodesWatched": 12,
-      "totalEpisodes": 25,
-      "notes": "Amazing storyline!",
-      "updatedAt": "2026-02-12T10:30:00.000Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 45,
-    "pages": 3
-  }
-}
-```
-
----
-
-#### Get Watchlist Statistics
-
-Retrieve aggregated statistics for user\'s watchlist.
-
-**Endpoint:** `GET /api/watchlist/stats`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "total": 45,
-    "plan_to_watch": 20,
-    "watching": 5,
-    "on_hold": 3,
-    "completed": 15,
-    "dropped": 2,
-    "averageRating": "8.4"
-  }
-}
-```
-
----
-
-#### Update Watchlist Item
-
-Update status, rating, progress, or notes for a watchlist item.
-
-**Endpoint:** `PUT /api/watchlist/:id`
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "status": "completed",
-  "rating": 10,
-  "episodesWatched": 25,
-  "notes": "Finally finished! Masterpiece ending."
-}
-```
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "65c1234567890abcdef12345",
-    "status": "completed",
-    "rating": 10,
-    "episodesWatched": 25,
-    "notes": "Finally finished! Masterpiece ending.",
-    "updatedAt": "2026-02-12T11:00:00.000Z"
-  }
-}
-```
-
----
-
-#### Remove from Watchlist
-
-Delete an anime from watchlist.
-
-**Endpoint:** `DELETE /api/watchlist/:id`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Removed from watchlist"
-}
-```
-
----
-
-#### Check Watchlist Status
-
-Check if specific anime is in user\'s watchlist.
-
-**Endpoint:** `GET /api/watchlist/check/:animeId`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "inWatchlist": true,
-    "item": {
-      "_id": "65c1234567890abcdef12345",
-      "status": "watching",
-      "rating": 9,
-      "episodesWatched": 12
-    }
-  }
-}
-```
-
----
-
-### Watchlist Endpoints
-
-#### Trigger notification generation
-
-Trigger notification generation manually for an anime
-
-**Endpoint:** `GET /api/notification/test-notifications`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "message": "done"
-}
-```
-
----
-
-#### Get notification
-
-Get notification for an anime
-
-**Endpoint:** `GET /api/notification/`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-[
-  {
-    "_id": "69907dbcf5b50fc7ea995bb3",
-    "user": "698ddafdb442eb8a682b6de1",
-    "animeId": "dead-account-20301",
-    "animeTitle": "Dead Account",
-    "animeImage": "https://cdn.noitatnemucod.net/thumbnail/300x400/100/b368556479b832ee553e4c9f35dfeee1.jpg",
-    "message": "New episode of Dead Account airs soon!",
-    "type": "NEXT_EPISODE",
-    "read": false,
-    "airingTime": "2026-02-14T15:00:00.000Z",
-    "createdAt": "2026-02-14T13:50:52.010Z",
-    "updatedAt": "2026-02-14T13:50:52.010Z",
-    "__v": 0
-  }
-]
-```
-
----
-
-#### Read notification
-
-Read notification for an anime
-
-**Endpoint:** `GET /api/notification/:id/read`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "message": "Marked as read"
-}
-```
-
----
-
-#### Clear notification
-
-Clear all notification for an anime
-
-**Endpoint:** `GET /api/notification/clear`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "message": "All cleared"
-}
-```
-
----
-
-### Continue Watching Endpoints
-
-#### Update Progress
-
-Save or update watching progress for an anime.
-
-**Endpoint:** `POST /api/continue-watching`
-
-**Authentication:** Required
-
-**Request Body:**
-
-```json
-{
-  "animeId": "attack-on-titan-001",
-  "animeTitle": "Attack on Titan",
-  "animeImage": "https://cdn.example.com/aot.jpg",
-  "currentEpisode": 13,
-  "currentTime": 720,
-  "duration": 1440,
-  "episodeTitle": "Episode 13 - Primal Desire"
-}
-```
-
-**Field Descriptions:**
-
-- `currentTime`: Current playback position in seconds
-- `duration`: Total episode duration in seconds
-- `currentEpisode`: Episode number currently watching
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "_id": "65c1234567890abcdef12346",
-    "user": "507f1f77bcf86cd799439011",
-    "animeId": "attack-on-titan-001",
-    "animeTitle": "Attack on Titan",
-    "currentEpisode": 13,
-    "currentTime": 720,
-    "duration": 1440,
-    "episodeTitle": "Episode 13 - Primal Desire",
-    "lastWatched": "2026-02-12T11:30:00.000Z"
-  }
-}
-```
-
----
-
-#### Get Continue Watching List
-
-Retrieve list of anime with saved progress, sorted by most recent.
-
-**Endpoint:** `GET /api/continue-watching`
-
-**Authentication:** Required
-
-**Query Parameters:**
-
-| Parameter | Type    | Required | Description                   |
-| --------- | ------- | -------- | ----------------------------- |
-| `limit`   | integer | No       | Number of items (default: 20) |
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "count": 3,
-  "data": [
-    {
-      "_id": "65c1234567890abcdef12346",
-      "animeId": "attack-on-titan-001",
-      "animeTitle": "Attack on Titan",
-      "animeImage": "https://cdn.example.com/aot.jpg",
-      "currentEpisode": 13,
-      "currentTime": 720,
-      "duration": 1440,
-      "episodeTitle": "Episode 13 - Primal Desire",
-      "lastWatched": "2026-02-12T11:30:00.000Z"
-    }
-  ]
-}
-```
-
----
-
-#### Get Specific Anime Progress
-
-Retrieve progress for a specific anime.
-
-**Endpoint:** `GET /api/continue-watching/:animeId`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "data": {
-    "animeId": "attack-on-titan-001",
-    "currentEpisode": 13,
-    "currentTime": 720,
-    "lastWatched": "2026-02-12T11:30:00.000Z"
-  }
-}
-```
-
-**Error Response (404 Not Found):**
-
-```json
-{
-  "success": false,
-  "message": "No progress found for this anime"
-}
-```
-
----
-
-#### Delete Progress Entry
-
-Remove a specific anime from continue watching history.
-
-**Endpoint:** `DELETE /api/watchlist/check/:animeId`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "Progress deleted successfully"
-}
-```
-
----
-
-#### Clear All History
-
-Delete all continue watching entries for user.
-
-**Endpoint:** `DELETE /api/continue-watching`
-
-**Authentication:** Required
-
-**Success Response (200 OK):**
-
-```json
-{
-  "success": true,
-  "message": "All watch history cleared"
-}
-```
-
----
-
-## Error Handling
-
-The API uses conventional HTTP response codes and returns structured error responses.
-
-### HTTP Status Codes
-
-| Code | Status                | Description                               |
-| ---- | --------------------- | ----------------------------------------- |
-| 200  | OK                    | Request succeeded                         |
-| 201  | Created               | Resource created successfully             |
-| 400  | Bad Request           | Invalid request parameters                |
-| 401  | Unauthorized          | Missing or invalid authentication token   |
-| 403  | Forbidden             | Insufficient permissions                  |
-| 404  | Not Found             | Resource not found                        |
-| 409  | Conflict              | Resource already exists (duplicate entry) |
-| 422  | Unprocessable Entity  | Validation error                          |
-| 429  | Too Many Requests     | Rate limit exceeded                       |
-| 500  | Internal Server Error | Server error                              |
-
-### Error Response Format
-
-```json
-{
-  "success": false,
-  "message": "Error description",
-  "errors": ["Detailed validation errors"]
-}
-```
-
-### Common Error Scenarios
-
-| Scenario                   | Status Code | Message                                |
-| -------------------------- | ----------- | -------------------------------------- |
-| Invalid email format       | 422         | "Please provide a valid email"         |
-| Duplicate email            | 409         | "Email already registered"             |
-| Wrong password             | 401         | "Invalid credentials"                  |
-| Missing token              | 401         | "Not authorized to access this route"  |
-| Expired token              | 401         | "Token expired, please login again"    |
-| Anime already in watchlist | 409         | "Anime already in watchlist"           |
-| Validation failed          | 422         | "Validation failed" with details array |
-
----
-
-## Rate Limiting
-
-To protect the API from abuse, rate limiting is implemented on authentication endpoints.
-
-### Limits
-
-| Endpoint                         | Limit        | Window     |
-| -------------------------------- | ------------ | ---------- |
-| `POST /api/auth/register`        | 5 requests   | 15 minutes |
-| `POST /api/auth/login`           | 5 requests   | 15 minutes |
-| `POST /api/auth/forgot-password` | 5 requests   | 15 minutes |
-| All other endpoints              | 100 requests | 15 minutes |
-
-### Rate Limit Headers
-
-When rate limit is approached, these headers are included in responses:
-
-| Header                  | Description                                |
-| ----------------------- | ------------------------------------------ |
-| `X-RateLimit-Limit`     | Maximum requests allowed per window        |
-| `X-RateLimit-Remaining` | Requests remaining in current window       |
-| `Retry-After`           | Seconds until limit resets (when exceeded) |
-
----
-
-## Database Schema
-
-### User Collection
-
-```javascript
-{
-  _id: ObjectId,
-  username: String (unique, 3-30 chars),
-  email: String (unique, validated),
-  password: String (hashed, bcrypt),
-  avatar: String (URL),
-  role: String (enum: [\'user\', \'admin\']),
-  isVerified: Boolean,
-  createdAt: Date,
-  updatedAt: Date
-}
-```
-
-### Watchlist Collection
-
-```javascript
-{
-  _id: ObjectId,
-  user: ObjectId (ref: User),
-  animeId: String,
-  animeTitle: String,
-  animeImage: String,
-  status: String (enum: [\'plan_to_watch\', \'watching\', \'on_hold\', \'completed\', \'dropped\']),
-  rating: Number (1-10),
-  episodesWatched: Number,
-  totalEpisodes: Number,
-  notes: String (max 500 chars),
-  createdAt: Date,
-  updatedAt: Date
-}
-// Index: { user: 1, animeId: 1 } (unique)
-```
-
-### ContinueWatching Collection
-
-```javascript
-{
-  _id: ObjectId,
-  user: ObjectId (ref: User),
-  animeId: String,
-  animeTitle: String,
-  animeImage: String,
-  currentEpisode: Number,
-  currentTime: Number (seconds),
-  duration: Number (seconds),
-  episodeTitle: String,
-  lastWatched: Date,
-  createdAt: Date,
-  updatedAt: Date
-}
-// Index: { user: 1, animeId: 1 } (unique)
-// Index: { user: 1, lastWatched: -1 }
-```
-
----
-
-## Environment Variables
-
-### Required Variables
-
-| Variable       | Description                | Example                                     |
-| -------------- | -------------------------- | ------------------------------------------- |
-| `PORT`         | Server port                | `5000`                                      |
-| `NODE_ENV`     | Environment mode           | `development`                               |
-| `MONGODB_URI`  | MongoDB connection string  | `mongodb://localhost:27017/anime_streaming` |
-| `JWT_SECRET`   | Secret key for JWT signing | `your-secret-key-min-32-chars`              |
-| `JWT_EXPIRE`   | Token expiration time      | `7d`                                        |
-| `EMAIL_HOST`   | SMTP server host           | `smtp.gmail.com`                            |
-| `EMAIL_PORT`   | SMTP server port           | `587`                                       |
-| `EMAIL_USER`   | SMTP username              | `your-email@gmail.com`                      |
-| `EMAIL_PASS`   | SMTP password              | `app-specific-password`                     |
-| `EMAIL_FROM`   | From address for emails    | `Anime Stream <noreply@animestream.com>`    |
-| `FRONTEND_URL` | Frontend application URL   | `http://localhost:3000`                     |
-
----
-
-## Deployment
-
-### Docker Deployment
-
+### 🐳 Docker Setup
+Use the integrated alpine dockerfile configuration:
 ```dockerfile
 FROM node:18-alpine
-
 WORKDIR /app
-
 COPY package*.json ./
 RUN npm ci --only=production
-
 COPY . .
-
 EXPOSE 5000
-
 CMD ["npm", "start"]
 ```
 
-### Production Checklist
-
-- [ ] Set `NODE_ENV=production`
-- [ ] Use strong, unique `JWT_SECRET` (32+ characters)
-- [ ] Configure production MongoDB URI (Atlas recommended)
-- [ ] Setup production email service (SendGrid/AWS SES)
-- [ ] Enable MongoDB authentication
-- [ ] Configure firewall rules
-- [ ] Setup SSL/TLS certificates
-- [ ] Configure process manager (PM2)
-- [ ] Setup monitoring and logging
-- [ ] Configure backup strategies
-
-### PM2 Configuration (ecosystem.config.js)
-
+### Deployed Node Clustering via PM2
+In multi-core server spaces, run Express clustered utilizing `ecosystem.config.js`:
 ```javascript
 module.exports = {
   apps: [{
-    name: \'anime-api\',
-    script: \'./index.js\',
-    instances: \'max\',
-    exec_mode: \'cluster\',
+    name: 'anime-api',
+    script: './index.js',
+    instances: 'max',
+    exec_mode: 'cluster',
     env: {
-      NODE_ENV: \'production\',
+      NODE_ENV: 'production',
       PORT: 5000
     },
-    error_file: \'./logs/err.log\',
-    out_file: \'./logs/out.log\',
-    log_date_format: \'YYYY-MM-DD HH:mm:ss Z\'
+    error_file: './logs/err.log',
+    out_file: './logs/out.log'
   }]
 };
 ```
 
 ---
 
-## Support
+## 8) CI/CD, Monitoring, and Security
 
-### Getting Help
-
-- **Issues:** [GitHub Issues](https://github.com/yourusername/OtakuStreams-Backend/issues)
-- **Email:** support@yourdomain.com
-- **Documentation:** [Full API Docs](https://docs.yourdomain.com)
-
-### Common Issues
-
-**MongoDB Connection Failed:**
-
-```bash
-# Ensure MongoDB is running
-sudo systemctl status mongod
-# Or start it
-sudo systemctl start mongod
-```
-
-**Email Not Sending:**
-
-- Verify SMTP credentials
-- For Gmail, use App-Specific Password (not account password)
-- Check firewall settings for port 587
-
-**JWT Token Errors:**
-
-- Ensure `JWT_SECRET` is set and consistent
-- Check token expiration (default: 7 days)
-- Verify `Authorization` header format: `Bearer <token>`
+- **Real-Time Keep-Alives:** The backend includes a self-ping system that queries the server's own `/health` endpoint every 8 minutes, preventing the app container from going to sleep on free hosting instances like Render.
+- **Robust Protection:** Enforces advanced security headers utilizing the **Helmet** package, strictly filters origins using a tailored **CORS** controller, and uses Express rate limiters on sensitive entry points to mitigate brute-force attacks.
+- **Socket Rooms:** Dispatches real-time WebSocket messages using Socket.IO, mapping users to personalized, secure rooms identified by their database IDs.
 
 ---
 
-**[Back to Top](#OtakuStreams-Backend)**
+## 9) Troubleshooting
 
-Built with care for anime fans everywhere
-'''
+1. **MongoDB Connection Failures:**
+   - *Symptoms:* Console displays Mongoose error or server fails to start.
+   - *Fix:* Ensure the MongoDB daemon is active:
+     ```bash
+     sudo systemctl start mongod # Linux
+     # Or verify your remote connection string in the .env file.
+     ```
+
+2. **Nodemailer SMTP Connection Failures:**
+   - *Symptoms:* Password recovery returns success but emails fail to arrive.
+   - *Fix:* Verify your password string. When using Gmail SMTP, you *must* generate an App-Specific Password inside your Google account configurations; standard account passwords will be rejected.
+
+3. **Socket Connections Failing with CORS Errors:**
+   - *Symptoms:* The browser console raises continuous connection drop warnings.
+   - *Fix:* Check your `.env` configuration. Ensure `FRONTEND_URL` exactly matches the hostname of your web app (with no trailing slashes).
+
+---
+
+## 10) Contributing and Contact
+
+Feel free to fork the repository, write custom controllers, and submit pull requests.
+
+- **Lead Maintainer:** Jawahar Govindasamy
+- **Repository:** [GitHub OtakuStreams Backend](https://github.com/jawahargovindasamy/OtakuStreams-Backend)
+
+---
+
+## 11) License and Credits
+
+### License
+This backend service is open-source and licensed under the **ISC License**.
