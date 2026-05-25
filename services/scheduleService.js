@@ -2,6 +2,32 @@ import axios from "axios";
 import ScheduledEpisode from "../models/ScheduledEpisode.js";
 import logger from "../utils/logger.js";
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Perform a POST request with automatic retry on 429 (Rate Limit) or 5xx (Server Error).
+ */
+const fetchWithRetry = async (url, data, config, retries = 5, delay = 2000) => {
+  try {
+    return await axios.post(url, data, config);
+  } catch (error) {
+    const isRateLimit = error.response && error.response.status === 429;
+    const isServerError = error.response && error.response.status >= 500;
+
+    if ((isRateLimit || isServerError) && retries > 0) {
+      const retryAfter = error.response.headers?.["retry-after"];
+      const waitTime = isRateLimit && retryAfter
+        ? (parseInt(retryAfter, 10) * 1000)
+        : delay;
+
+      logger.warn(`AniList API returned ${error.response.status}. Retrying in ${waitTime}ms... (${retries} attempts remaining)`);
+      await sleep(waitTime);
+      return fetchWithRetry(url, data, config, retries - 1, delay * 2);
+    }
+    throw error;
+  }
+};
+
 export const syncTodaySchedule = async () => {
   const startTime = Date.now();
 
@@ -50,7 +76,7 @@ export const syncTodaySchedule = async () => {
         page: page,
       };
 
-      const res = await axios.post(
+      const res = await fetchWithRetry(
         "https://graphql.anilist.co",
         {
           query,
