@@ -14,7 +14,7 @@ export const protect = async (req, res, next) => {
       // Get token from header
       token = req.headers.authorization.split(" ")[1];
 
-      if (!token || token === "null" || token === "undefined") {
+      if (!token || token === "null" || token === "undefined" || token === "[object Object]") {
         return res.status(STATUS_CODES.UNAUTHORIZED).json({
           success: false,
           message: ERROR_MESSAGES.UNAUTHORIZED,

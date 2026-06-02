@@ -36,7 +36,7 @@ export const initializeSocket = (server) => {
       token = socket.handshake.query.token;
     }
 
-    if (!token || token === "null" || token === "undefined") {
+    if (!token || token === "null" || token === "undefined" || token === "[object Object]") {
       logger.warn("Socket connection rejected: No authentication token provided", {
         socketId: socket.id,
       });
@@ -48,7 +48,7 @@ export const initializeSocket = (server) => {
       token = token.slice(7).trim();
     }
 
-    if (!token || token === "null" || token === "undefined") {
+    if (!token || token === "null" || token === "undefined" || token === "[object Object]") {
       logger.warn("Socket connection rejected: No authentication token provided", {
         socketId: socket.id,
       });
