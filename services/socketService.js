@@ -36,7 +36,7 @@ export const initializeSocket = (server) => {
       token = socket.handshake.query.token;
     }
 
-    if (!token) {
+    if (!token || token === "null" || token === "undefined") {
       logger.warn("Socket connection rejected: No authentication token provided", {
         socketId: socket.id,
       });
@@ -44,8 +44,15 @@ export const initializeSocket = (server) => {
     }
 
     // Handle Bearer <token> format
-    if (typeof token === "string" && token.startsWith("Bearer ")) {
+    if (typeof token === "string" && token.startsWith("Bearer ") && token.length > 7) {
       token = token.slice(7).trim();
+    }
+
+    if (!token || token === "null" || token === "undefined") {
+      logger.warn("Socket connection rejected: No authentication token provided", {
+        socketId: socket.id,
+      });
+      return next(new Error("Authentication error: Token required"));
     }
 
     try {
