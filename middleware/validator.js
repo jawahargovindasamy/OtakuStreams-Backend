@@ -106,3 +106,16 @@ export const userPreferencesValidation = [
     .isIn(["hd-1", "hd-2"])
     .withMessage("Server preference must be either 'hd-1' or 'hd-2'"),
 ];
+
+export const contactValidation = [
+  body("name").trim().notEmpty().withMessage("Name is required"),
+  body("email")
+    .isEmail()
+    .normalizeEmail()
+    .withMessage("Please provide a valid email"),
+  body("subject")
+    .isIn(["general", "bug", "business", "dmca", "other"])
+    .withMessage("Invalid subject category"),
+  body("message").trim().notEmpty().withMessage("Message content is required"),
+];
+
