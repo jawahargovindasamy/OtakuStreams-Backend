@@ -17,6 +17,7 @@ import continueWatchingRoutes from "./routes/continueWatchingRoutes.js";
 import notificationRoutes from "./routes/notificationRoutes.js";
 import randomRoutes from "./routes/randomRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
+import appVersionRoutes from "./routes/appVersionRoutes.js";
 import { startEpisodeJob } from "./jobs/episodeNotificationJob.js";
 import { startScheduleJob } from "./jobs/scheduleJob.js";
 
@@ -82,6 +83,7 @@ app.use("/api/continue-watching", continueWatchingRoutes);
 app.use("/api/notification", notificationRoutes);
 app.use("/api/random", randomRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/app", appVersionRoutes);
 
 app.get("/", (req, res) => {
   res.send("Otakustreams API running 🚀");

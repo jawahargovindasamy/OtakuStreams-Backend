@@ -119,3 +119,27 @@ export const contactValidation = [
   body("message").trim().notEmpty().withMessage("Message content is required"),
 ];
 
+export const appVersionRegisterValidation = [
+  body("platform").isIn(["android", "ios"]).withMessage("Platform must be android or ios"),
+  body("environment").isIn(["development", "staging", "production"]).withMessage("Invalid environment"),
+  body("channel").isIn(["internal", "beta", "stable"]).withMessage("Invalid channel"),
+  body("versionName").trim().notEmpty().withMessage("Version name is required"),
+  body("versionCode").isInt({ min: 1 }).withMessage("Version code must be a positive integer"),
+  body("artifact.name").trim().notEmpty().withMessage("Artifact name is required"),
+  body("artifact.url").isURL().withMessage("Artifact URL must be a valid URL"),
+  body("artifact.sha256").trim().notEmpty().withMessage("Artifact SHA256 checksum is required"),
+  body("artifact.size").isInt({ min: 1 }).withMessage("Artifact size must be a positive integer"),
+  body("minSupportedVersionCode").isInt({ min: 1 }).withMessage("Minimum supported version code must be a positive integer"),
+  body("forceUpdate").isBoolean().withMessage("forceUpdate must be a boolean"),
+  body("rolloutPercentage").optional().isInt({ min: 0, max: 100 }).withMessage("rolloutPercentage must be between 0 and 100"),
+  body("releaseNotes").isArray().withMessage("releaseNotes must be an array of strings"),
+];
+
+export const appVersionRollbackValidation = [
+  body("platform").isIn(["android", "ios"]).withMessage("Platform must be android or ios"),
+  body("environment").isIn(["development", "staging", "production"]).withMessage("Invalid environment"),
+  body("channel").isIn(["internal", "beta", "stable"]).withMessage("Invalid channel"),
+  body("rollbackToCode").isInt({ min: 1 }).withMessage("rollbackToCode must be a positive integer"),
+];
+
+
