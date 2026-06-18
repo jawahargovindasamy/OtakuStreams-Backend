@@ -124,6 +124,36 @@ export const registerVersion = async (req, res) => {
 
     const { platform, versionCode, environment, channel } = req.body;
 
+    // Resolve minSupportedVersionCode with Carry-Forward logic
+    let minSupportedVersionCode = parseInt(req.body.minSupportedVersionCode, 10);
+    if (isNaN(minSupportedVersionCode)) {
+      minSupportedVersionCode = versionCode;
+    }
+
+    if (!req.body.forceUpdate && (minSupportedVersionCode === 0 || minSupportedVersionCode === versionCode)) {
+      // Find the previous active release on this platform/channel/environment
+      const previousRelease = await AppVersion.findOne({
+        platform,
+        environment,
+        channel,
+        versionCode: { $lt: versionCode },
+        status: "active",
+      }).sort({ versionCode: -1 });
+
+      if (previousRelease) {
+        minSupportedVersionCode = previousRelease.minSupportedVersionCode;
+      } else {
+        minSupportedVersionCode = versionCode;
+      }
+    } else if (req.body.forceUpdate) {
+      minSupportedVersionCode = versionCode;
+    }
+
+    const registrationPayload = {
+      ...req.body,
+      minSupportedVersionCode,
+    };
+
     // Find and update or create (run pre-save hooks correctly)
     let version = await AppVersion.findOne({
       platform,
@@ -134,9 +164,9 @@ export const registerVersion = async (req, res) => {
 
     if (version) {
       // Overwrite/Update fields for idempotence
-      Object.assign(version, req.body);
+      Object.assign(version, registrationPayload);
     } else {
-      version = new AppVersion(req.body);
+      version = new AppVersion(registrationPayload);
     }
 
     await version.save();

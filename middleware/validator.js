@@ -129,7 +129,7 @@ export const appVersionRegisterValidation = [
   body("artifact.url").isURL().withMessage("Artifact URL must be a valid URL"),
   body("artifact.sha256").trim().notEmpty().withMessage("Artifact SHA256 checksum is required"),
   body("artifact.size").isInt({ min: 1 }).withMessage("Artifact size must be a positive integer"),
-  body("minSupportedVersionCode").isInt({ min: 1 }).withMessage("Minimum supported version code must be a positive integer"),
+  body("minSupportedVersionCode").isInt({ min: 0 }).withMessage("Minimum supported version code must be a non-negative integer"),
   body("forceUpdate").isBoolean().withMessage("forceUpdate must be a boolean"),
   body("rolloutPercentage").optional().isInt({ min: 0, max: 100 }).withMessage("rolloutPercentage must be between 0 and 100"),
   body("releaseNotes").isArray().withMessage("releaseNotes must be an array of strings"),
