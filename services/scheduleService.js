@@ -1,5 +1,6 @@
 import axios from "axios";
 import ScheduledEpisode from "../models/ScheduledEpisode.js";
+import { checkMegaplayAvailability } from "./megaplayService.js";
 import logger from "../utils/logger.js";
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -128,6 +129,42 @@ export const syncTodaySchedule = async () => {
         if (!media) continue;
 
         const title = media.title?.english || media.title?.romaji || media.title?.native || "Unknown Title";
+        const episodeNum = schedule.episode;
+
+        let shouldInsert = true;
+
+        if (episodeNum > 1) {
+          shouldInsert = false;
+          const previousEpisodes = [];
+          for (let i = 1; i <= 3; i++) {
+            const prevEp = episodeNum - i;
+            if (prevEp > 0) {
+              previousEpisodes.push(prevEp);
+            }
+          }
+
+          for (const prevEp of previousEpisodes) {
+            const available = await checkMegaplayAvailability(
+              media.id.toString(),
+              media.idMal ? media.idMal.toString() : null,
+              prevEp
+            );
+
+            if (available) {
+              shouldInsert = true;
+              break;
+            }
+          }
+        }
+
+        if (!shouldInsert) {
+          logger.info("Skipping schedule insert: previous episodes not available on Megaplay", {
+            animeId: media.id,
+            title,
+            episode: episodeNum,
+          });
+          continue;
+        }
 
         const result = await ScheduledEpisode.updateOne(
           {

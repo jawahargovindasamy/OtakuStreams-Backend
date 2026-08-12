@@ -1,4 +1,4 @@
-import axios from "axios";
+import { checkMegaplayAvailability } from "./megaplayService.js";
 import Notification from "../models/Notification.js";
 import Watchlist from "../models/Watchlist.js";
 import ScheduledEpisode from "../models/ScheduledEpisode.js";
@@ -25,12 +25,6 @@ export const generateEpisodeNotifications = async () => {
     });
 
     let totalNotificationsSent = 0;
-    
-    const headers = {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      Referer: "https://megaplay.buzz/",
-    };
 
     for (const scheduled of pendingEpisodes) {
       const { animeId, malId, episode } = scheduled;
@@ -42,34 +36,7 @@ export const generateEpisodeNotifications = async () => {
           episode,
         });
 
-        const subPatterns = [
-          `https://megaplay.buzz/stream/ani/${animeId}/${episode}/sub`,
-        ];
-        if (malId) {
-          subPatterns.push(`https://megaplay.buzz/stream/mal/${malId}/${episode}/sub`);
-        }
-
-        let isAvailable = false;
-
-        for (const url of subPatterns) {
-          try {
-            const response = await axios.get(url, { headers, timeout: 8000 });
-            const bodyStr =
-              typeof response.data === "string"
-                ? response.data
-                : JSON.stringify(response.data);
-
-            if (
-              response.status === 200 &&
-              !bodyStr.includes("Oops! Something went wrong")
-            ) {
-              isAvailable = true;
-              break;
-            }
-          } catch (error) {
-            // Silently fail and try next pattern if any
-          }
-        }
+        const isAvailable = await checkMegaplayAvailability(animeId, malId, episode);
 
         if (!isAvailable) {
           logger.info("Episode not uploaded on Megaplay yet", {
