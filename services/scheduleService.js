@@ -123,75 +123,87 @@ export const syncTodaySchedule = async () => {
 
     let upsertedCount = 0;
 
+    // Group schedules by animeId
+    const schedulesByAnime = {};
     for (const schedule of allSchedules) {
-      try {
-        const media = schedule.media;
-        if (!media) continue;
+      const media = schedule.media;
+      if (!media) continue;
+      const animeId = media.id.toString();
+      if (!schedulesByAnime[animeId]) {
+        schedulesByAnime[animeId] = [];
+      }
+      schedulesByAnime[animeId].push(schedule);
+    }
 
-        const title = media.title?.english || media.title?.romaji || media.title?.native || "Unknown Title";
-        const episodeNum = schedule.episode;
+    for (const animeId in schedulesByAnime) {
+      const group = schedulesByAnime[animeId];
+      // Sort episodes ascending
+      group.sort((a, b) => a.episode - b.episode);
+      
+      const firstSchedule = group[0];
+      const media = firstSchedule.media;
+      const title = media.title?.english || media.title?.romaji || media.title?.native || "Unknown Title";
+      const episodeMin = firstSchedule.episode;
 
-        let shouldInsert = true;
+      let shouldInsertGroup = true;
 
-        if (episodeNum > 1) {
-          shouldInsert = false;
-          const previousEpisodes = [];
-          for (let i = 1; i <= 3; i++) {
-            const prevEp = episodeNum - i;
-            if (prevEp > 0) {
-              previousEpisodes.push(prevEp);
-            }
-          }
+      if (episodeMin > 1) {
+        shouldInsertGroup = false;
+        const prevEp = episodeMin - 1;
 
-          for (const prevEp of previousEpisodes) {
-            const available = await checkMegaplayAvailability(
-              media.id.toString(),
-              media.idMal ? media.idMal.toString() : null,
-              prevEp
-            );
-
-            if (available) {
-              shouldInsert = true;
-              break;
-            }
-          }
-        }
-
-        if (!shouldInsert) {
-          logger.info("Skipping schedule insert: previous episodes not available on Megaplay", {
-            animeId: media.id,
-            title,
-            episode: episodeNum,
-          });
-          continue;
-        }
-
-        const result = await ScheduledEpisode.updateOne(
-          {
-            animeId: media.id.toString(),
-            episode: schedule.episode,
-          },
-          {
-            $setOnInsert: {
-              malId: media.idMal ? media.idMal.toString() : null,
-              animeTitle: title,
-              airingTimestamp: schedule.airingAt * 1000, // convert to ms
-              airingDate: todayStr,
-              isNotified: false,
-            },
-          },
-          { upsert: true }
+        const status = await checkMegaplayAvailability(
+          media.id.toString(),
+          media.idMal ? media.idMal.toString() : null,
+          prevEp
         );
 
-        if (result.upsertedCount > 0) {
-          upsertedCount++;
+        if (status === "AVAILABLE" || status === "VERIFICATION_FAILED") {
+          shouldInsertGroup = true;
+          if (status === "VERIFICATION_FAILED") {
+            logger.warn(`Verification failed for previous episode ${prevEp} of "${title}". Falling back to allow insertion.`);
+          }
         }
-      } catch (error) {
-        logger.error("Failed to upsert scheduled episode", {
-          animeId: schedule.media?.id,
-          episode: schedule.episode,
-          message: error.message,
+      }
+
+      if (!shouldInsertGroup) {
+        logger.info("Skipping schedule insert for group: previous episode not available on Megaplay", {
+          animeId,
+          title,
+          episodes: group.map(s => s.episode),
         });
+        continue;
+      }
+
+      // Upsert all schedules in this group
+      for (const schedule of group) {
+        try {
+          const result = await ScheduledEpisode.updateOne(
+            {
+              animeId: media.id.toString(),
+              episode: schedule.episode,
+            },
+            {
+              $setOnInsert: {
+                malId: media.idMal ? media.idMal.toString() : null,
+                animeTitle: title,
+                airingTimestamp: schedule.airingAt * 1000, // convert to ms
+                airingDate: todayStr,
+                isNotified: false,
+              },
+            },
+            { upsert: true }
+          );
+
+          if (result.upsertedCount > 0) {
+            upsertedCount++;
+          }
+        } catch (error) {
+          logger.error("Failed to upsert scheduled episode", {
+            animeId: media.id,
+            episode: schedule.episode,
+            message: error.message,
+          });
+        }
       }
     }
 

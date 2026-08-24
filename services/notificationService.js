@@ -10,9 +10,13 @@ export const generateEpisodeNotifications = async () => {
   try {
     logger.info("Episode notification job started");
 
+    const fortyEightHoursAgo = Date.now() - 48 * 60 * 60 * 1000;
     const pendingEpisodes = await ScheduledEpisode.find({
       isNotified: false,
-      airingTimestamp: { $lte: Date.now() },
+      airingTimestamp: {
+        $lte: Date.now(),
+        $gte: fortyEightHoursAgo,
+      },
     });
 
     if (!pendingEpisodes.length) {
@@ -36,13 +40,20 @@ export const generateEpisodeNotifications = async () => {
           episode,
         });
 
-        const isAvailable = await checkMegaplayAvailability(animeId, malId, episode);
+        const status = await checkMegaplayAvailability(animeId, malId, episode);
 
-        if (!isAvailable) {
-          logger.info("Episode not uploaded on Megaplay yet", {
-            animeId,
-            episode,
-          });
+        if (status !== "AVAILABLE") {
+          if (status === "VERIFICATION_FAILED") {
+            logger.warn("Megaplay availability check failed due to security/connection issue. Skipping for now.", {
+              animeId,
+              episode,
+            });
+          } else {
+            logger.info("Episode not uploaded on Megaplay yet", {
+              animeId,
+              episode,
+            });
+          }
           continue;
         }
 
