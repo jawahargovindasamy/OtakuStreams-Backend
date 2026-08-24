@@ -5,13 +5,13 @@ import logger from "../utils/logger.js";
 export const startScheduleJob = () => {
   logger.info("Schedule sync cron job initialized", {
     job: "scheduleSync",
-    schedule: "15 0 * * *",
+    schedule: "15 6 * * *",
     timezone: "Asia/Kolkata",
   });
 
-  // Run daily at 12:15 AM
+  // Run daily at 6:15 AM
   cron.schedule(
-    "15 0 * * *",
+    "15 6 * * *",
     async () => {
       const startTime = Date.now();
 
