@@ -20,14 +20,22 @@ export const startScheduleJob = () => {
           job: "scheduleSync",
         });
 
-        await syncTodaySchedule();
+        const result = await syncTodaySchedule();
 
         const duration = Date.now() - startTime;
 
-        logger.info("Schedule sync job completed successfully", {
-          job: "scheduleSync",
-          duration: `${duration}ms`,
-        });
+        if (result && !result.success) {
+          logger.warn("Schedule sync job skipped/incomplete due to upstream issue", {
+            job: "scheduleSync",
+            reason: result.reason,
+            duration: `${duration}ms`,
+          });
+        } else {
+          logger.info("Schedule sync job completed successfully", {
+            job: "scheduleSync",
+            duration: `${duration}ms`,
+          });
+        }
       } catch (error) {
         logger.error("Schedule sync job failed", {
           job: "scheduleSync",

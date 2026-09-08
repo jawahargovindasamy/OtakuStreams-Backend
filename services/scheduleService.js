@@ -8,12 +8,37 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Perform a POST request with automatic retry on 429 (Rate Limit) or 5xx (Server Error).
  */
-const fetchWithRetry = async (url, data, config, retries = 5, delay = 2000) => {
+const fetchWithRetry = async (url, data, config, retries = 3, delay = 2000) => {
   try {
-    return await axios.post(url, data, config);
+    const res = await axios.post(url, data, config);
+    if (res.data?.errors && res.data.errors.length > 0) {
+      const errMessage = res.data.errors[0].message;
+      const customErr = new Error(`AniList GraphQL Error: ${errMessage}`);
+      if (errMessage.toLowerCase().includes("disabled") || errMessage.toLowerCase().includes("stability")) {
+        customErr.isUpstreamOutage = true;
+      }
+      throw customErr;
+    }
+    return res;
   } catch (error) {
-    const isRateLimit = error.response && error.response.status === 429;
-    const isServerError = error.response && error.response.status >= 500;
+    const status = error.response?.status;
+    const aniListErrorMessage = error.response?.data?.errors?.[0]?.message;
+
+    if (aniListErrorMessage) {
+      const isOutage =
+        status === 403 ||
+        aniListErrorMessage.toLowerCase().includes("disabled") ||
+        aniListErrorMessage.toLowerCase().includes("stability");
+
+      if (isOutage) {
+        const customErr = new Error(`AniList API Unavailable: ${aniListErrorMessage}`);
+        customErr.isUpstreamOutage = true;
+        throw customErr;
+      }
+    }
+
+    const isRateLimit = status === 429;
+    const isServerError = status && status >= 500;
 
     if ((isRateLimit || isServerError) && retries > 0) {
       const retryAfter = error.response.headers?.["retry-after"];
@@ -21,7 +46,7 @@ const fetchWithRetry = async (url, data, config, retries = 5, delay = 2000) => {
         ? (parseInt(retryAfter, 10) * 1000)
         : delay;
 
-      logger.warn(`AniList API returned ${error.response.status}. Retrying in ${waitTime}ms... (${retries} attempts remaining)`);
+      logger.warn(`AniList API returned ${status}. Retrying in ${waitTime}ms... (${retries} attempts remaining)`);
       await sleep(waitTime);
       return fetchWithRetry(url, data, config, retries - 1, delay * 2);
     }
@@ -29,15 +54,17 @@ const fetchWithRetry = async (url, data, config, retries = 5, delay = 2000) => {
   }
 };
 
-export const syncTodaySchedule = async () => {
+export const syncTodaySchedule = async (customDateStr = null) => {
   const startTime = Date.now();
+  let todayStr = customDateStr;
 
-  try {
-    // 1. Get current date in Asia/Kolkata
-    const todayStr = new Date().toLocaleDateString("en-CA", {
+  if (!todayStr) {
+    todayStr = new Date().toLocaleDateString("en-CA", {
       timeZone: "Asia/Kolkata",
     });
+  }
 
+  try {
     logger.info("Schedule sync started", {
       date: todayStr,
     });
@@ -87,8 +114,18 @@ export const syncTodaySchedule = async () => {
           headers: {
             "Content-Type": "application/json",
             Accept: "application/json",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "User-Agent":
+              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            Origin: "https://anilist.co",
+            Referer: "https://anilist.co/",
+            "Sec-Ch-Ua": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+            "Sec-Ch-Ua-Mobile": "?0",
+            "Sec-Ch-Ua-Platform": '"Windows"',
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "cross-site",
           },
+          timeout: 15000,
         }
       );
 
@@ -113,7 +150,7 @@ export const syncTodaySchedule = async () => {
       logger.info("No anime scheduled for today", {
         date: todayStr,
       });
-      return;
+      return { success: true, count: 0, date: todayStr };
     }
 
     logger.info("Fetched schedule data from AniList", {
@@ -215,10 +252,33 @@ export const syncTodaySchedule = async () => {
       newInserted: upsertedCount,
       duration: `${duration}ms`,
     });
+
+    return {
+      success: true,
+      date: todayStr,
+      totalFetched: allSchedules.length,
+      newInserted: upsertedCount,
+      duration: `${duration}ms`,
+    };
   } catch (error) {
-    logger.error("Schedule sync job crashed", {
+    if (error.isUpstreamOutage) {
+      logger.warn("Schedule sync paused: AniList API is temporarily unavailable upstream", {
+        reason: error.message,
+      });
+      return {
+        success: false,
+        reason: error.message,
+      };
+    }
+
+    logger.error("Schedule sync job encountered an error", {
       message: error.message,
       stack: error.stack,
     });
+
+    return {
+      success: false,
+      reason: error.message,
+    };
   }
 };

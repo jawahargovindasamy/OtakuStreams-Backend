@@ -29,13 +29,27 @@ export const getRandomAnime = async (req, res) => {
     const randomPage = Math.floor(Math.random() * 10) + 1;
     const perPage = 20;
 
-    const response = await axios.post(ANILIST_URL, {
-      query,
-      variables: {
-        page: randomPage,
-        perPage: perPage,
+    const response = await axios.post(
+      ANILIST_URL,
+      {
+        query,
+        variables: {
+          page: randomPage,
+          perPage: perPage,
+        },
       },
-    });
+      {
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "User-Agent":
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+          Origin: "https://anilist.co",
+          Referer: "https://anilist.co/",
+        },
+        timeout: 10000,
+      }
+    );
 
     const animes = response.data?.data?.Page?.media || [];
 
@@ -61,11 +75,14 @@ export const getRandomAnime = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error("AniList Random Anime Error:", error.response?.data || error.message);
+    const upstreamError = error.response?.data?.errors?.[0]?.message;
+    console.error("AniList Random Anime Error:", upstreamError || error.response?.data || error.message);
 
     return res.status(STATUS_CODES.SERVER_ERROR).json({
       success: false,
-      message: "Failed to fetch random anime from AniList",
+      message: upstreamError
+        ? `AniList service notice: ${upstreamError}`
+        : "Failed to fetch random anime from AniList",
     });
   }
 };
